@@ -12,7 +12,7 @@ class Frequencia:
 
     id_frequencia: Optional[int] = None
    # aluno_id: int
-  #  sessao_id: int
+   # sessao_id: int
     hora_saida: time
     hora_entrada: time
     presente: Presenca
