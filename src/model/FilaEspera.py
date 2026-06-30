@@ -6,6 +6,5 @@ from datetime import date
 class FilaEspera:
 
     data_entrada: date
-    posicao_na_fila: int
-    # aluno_id: Optional[int] = None
-    # sessao_id: Optional[int] = None
+    posicao_na_fila: Optional[int] = None
+  

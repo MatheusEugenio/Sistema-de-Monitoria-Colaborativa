@@ -59,10 +59,8 @@ class UsuarioRepository:
         finally:
             connect.close()   
 
+    def deletar(self, id_user: int) -> None:
 
-
-    def deletar(self, id: int) -> None:
-        
         connect = get_connection()
 
         try:
@@ -78,7 +76,6 @@ class UsuarioRepository:
             
             finally:
                 cursor.close()
-
 
         finally:
             connect.close()
