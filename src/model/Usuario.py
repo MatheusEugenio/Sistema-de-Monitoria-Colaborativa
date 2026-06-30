@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-#from datetime import datetime
+from typing import Optional
 from database.connection import get_connection
 
 @dataclass
@@ -23,7 +23,13 @@ class UsuarioRepository:
         connection.close()
 
         return usuarios
-           
+
+    def inserir(self, usuario: Usuario) -> int:
+      
+
+
+    def deletar(self, id: int) -> None:
+        
 
 
 
