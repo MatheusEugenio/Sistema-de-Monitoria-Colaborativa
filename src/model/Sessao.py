@@ -1,6 +1,8 @@
-from typing import Optional
+from typing import Optional, List
 from dataclasses import dataclass
 from datetime import time
+import psycopg2.extras
+from database.connection import get_connection
 
 @dataclass
 class Sessao:
@@ -9,4 +11,79 @@ class Sessao:
     limite_participantes: int
     horario: time
     descricao: str
-    # monitoria_id: Optional[int] = None
+
+class SessaoRepository:
+
+    def listar(self) -> List[Sessao]:
+        
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            cursor.execute("SELECT id_sessao, limite_participantes, horario, descricao FROM sessao")
+
+            linhas = cursor.fetchall()
+
+            cursor.close()
+
+
+            return [
+                Sessao(
+                    id_sessao=l["id_sessao"],
+                    limite_participantes=l["limite_participantes"],
+                    horario=l["horario"],
+                    descricao=l["descricao"]
+                ) for l in linhas
+            ]
+
+        finally:
+            connect.close()
+
+    def inserir(self, sessao: Sessao) -> None:
+
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor()
+
+            try:
+                cursor.execute(
+                    """INSERT INTO sessao (limite_participantes, horario, descricao) 
+                       VALUES (%s, %s, %s)""",
+                    (sessao.limite_participantes, sessao.horario, sessao.descricao),
+                )
+
+                connect.commit()
+
+            except Exception:
+                connect.rollback()
+                raise
+
+            finally:
+                cursor.close()
+
+        finally:
+            connect.close()
+
+    def deletar(self, id_sessao: int) -> None:
+
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor()
+
+            try:
+                cursor.execute("DELETE FROM sessao WHERE id_sessao = %s", (id_sessao,))
+
+                connect.commit()
+
+            except Exception:
+                connect.rollback()
+                raise
+
+            finally:
+                cursor.close()
+
+        finally:
+            connect.close()

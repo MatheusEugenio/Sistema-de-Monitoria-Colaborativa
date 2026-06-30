@@ -24,12 +24,8 @@ class UsuarioRepository:
             
             cursor.close()
 
-            usuarios = []
-
-            for linha in linhas:
-                usuarios.append(Usuario(**linha))
-
-            return usuarios
+            return [Usuario(**linha) for linha in linhas]
+          
         finally:
             connect.close()
 
