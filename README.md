@@ -44,7 +44,7 @@ cd seu-repositorio
 Execute o script localizado em:
 
 ```text
-database/schema.sql
+database/schemamonitoria.sql
 ```
 
 para criar todas as tabelas e demais objetos necessários no PostgreSQL.
