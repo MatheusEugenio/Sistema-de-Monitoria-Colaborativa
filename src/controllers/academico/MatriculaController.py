@@ -1,9 +1,9 @@
 import pandas as pd
 
 from models import MatriculaSe, MatriculaSeRepository
-import controllers.AlunoController as aluno_controller
-import controllers.DisciplinaController as disciplina_controller
-import controllers.TurmaController as turma_controller
+import controllers.academico.AlunoController as aluno_controller
+import controllers.academico.DisciplinaController as disciplina_controller
+import controllers.academico.TurmaController as turma_controller
 
 _repo = MatriculaSeRepository()
 

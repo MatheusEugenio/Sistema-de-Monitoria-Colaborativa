@@ -1,7 +1,7 @@
 import pandas as pd
 
 from models import Professor, ProfessorRepository
-import controllers.usuario_controller as usuario_controller
+import controllers.administrativo.UsuarioController as usuario_controller
 
 _repo = ProfessorRepository()
 

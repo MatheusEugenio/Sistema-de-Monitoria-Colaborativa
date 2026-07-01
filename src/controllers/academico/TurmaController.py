@@ -1,7 +1,7 @@
 import pandas as pd
 
 from models import Turma, TurmaRepository
-import controllers.DisciplinaController as disciplina_controller
+import controllers.academico.DisciplinaController as disciplina_controller
 
 _repo = TurmaRepository()
 
