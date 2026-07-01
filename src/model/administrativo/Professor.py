@@ -1,102 +1,87 @@
 from typing import Optional, List
 from dataclasses import dataclass
-import psycopg2.extras
-from database.connectection import get_connectection
+
+from sqlalchemy import text
+from database.connection import get_session
 
 @dataclass
 class Professor:
 
     id_professor: Optional[int] = None
     departamento: str
+    usuario_id: Optional[int] = None
 
 class ProfessorRepository:
 
     def buscarPorIdProfessor(self, id_professor: int) -> Optional[Professor]:
-        connect = get_connection()
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("SELECT * FROM professor WHERE id_professor = %s", (id_professor,))
 
-            linha = cursor.fetchone()
-            
+            resultado = session.execute(
+                text("SELECT id_professor, departamento, id_usuario FROM professor WHERE id_professor = :id"),
+                {"id": id_professor}
+            )
+
+            linha = resultado.mappings().first()
+
             return Professor(**linha) if linha else None
+
         finally:
-            cursor.close()
-            connect.close()
-            
+            session.close()
+
+
     def listar(self) -> List[Professor]:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute("SELECT id_professor, departamento FROM professor")
+            resultado = session.execute(text("SELECT id_professor, departamento, id_usuario FROM professor ORDER BY id_professor"))
 
-            linhas = cursor.fetchall()
+            linhas = resultado.mappings().all()
 
-            cursor.close()
-
-            return [
-                Professor(
-                    id_professor=l["id_professor"],
-                    departamento=l["departamento"]
-                ) for l in linhas
-            ]
+            return [Professor(**linha) for linha in linhas]
 
         finally:
-            connect.close()
+            session.close()
+
 
     def inserir(self, professor: Professor) -> None:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
 
-            if self.buscarPorIdProfessor(professor.id_professor):
+            if professor.id_professor is not None and self.buscarPorIdProfessor(professor.id_professor):
                 raise ValueError("Professor já cadastrado.")
-                
-            try:
-                cursor.execute(
-                    "INSERT INTO professor (departamento) VALUES (%s)",
-                    (professor.departamento,),
-                )
 
-                connect.commit()
+            session.execute(text("INSERT INTO professor (departamento, id_usuario) VALUES (:departamento, :id_usuario)"),{"departamento": professor.departamento,"id_usuario": professor.id_usuario})
 
-            except Exception:
-                connect.rollback()
-                raise
+            session.commit()
 
-            finally:
-                cursor.close()
-
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
+
 
     def deletar(self, id_professor: int) -> None:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
+            session.execute(
+                text("DELETE FROM professor WHERE id_professor = :id"),
+                {"id": id_professor}
+            )
 
-            try:
-                cursor.execute("DELETE FROM professor WHERE id_professor = %s", (id_professor,))
+            session.commit()
 
-                connect.commit()
-
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
-    
-    
+            session.close()

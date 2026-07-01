@@ -1,5 +1,9 @@
-from typing import Optional
+from typing import Optional, List
 from dataclasses import dataclass
+
+from sqlalchemy import text
+
+from database.connection import get_session
 
 @dataclass
 class Disciplina:
@@ -9,62 +13,112 @@ class Disciplina:
     carga_horaria: int
     semestre: str
 
-class DisciplinaRepository(RepositorioBase):
+class DisciplinaRepository:
 
     def buscarDisciplinaPorId(self, id_disciplina: int) -> Optional[Disciplina]:
-        
-        connect = get_connection()
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("SELECT * FROM disciplinas WHERE id_disciplina = %s", (id_disciplina,))
+            resultado = session.execute(text("""
+                    SELECT
+                        id_disciplina,
+                        nome,
+                        carga_horaria,
+                        semestre
+                    FROM disciplinas
+                    WHERE id_disciplina = :id
+                """),{"id": id_disciplina})
 
-            linha = cursor.fetchone()
-            
+            linha = resultado.mappings().first()
+
             return Disciplina(**linha) if linha else None
-
         finally:
-            cursor.close()
-            connect.close()
+            session.close()
 
 
     def buscarDisciplina(self, nome: str, carga_horaria: int, semestre: str) -> Optional[Disciplina]:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("SELECT * FROM disciplinas WHERE nome = %s AND carga_horaria = %s AND semestre = %s", (nome, carga_horaria, semestre))
+            resultado = session.execute(text("""
+                    SELECT
+                        id_disciplina,
+                        nome,
+                        carga_horaria,
+                        semestre
+                    FROM disciplinas
+                    WHERE nome = :nome
+                      AND carga_horaria = :carga_horaria
+                      AND semestre = :semestre
+                """),{"nome": nome, "carga_horaria": carga_horaria, "semestre": semestre})
 
-            linha = cursor.fetchone()
-            
+            linha = resultado.mappings().first()
+
             return Disciplina(**linha) if linha else None
-
         finally:
-            cursor.close()
-            connect.close()
+            session.close()
 
 
     def listar(self) -> List[Disciplina]:
 
-        with get_cursor() as cur:
-            cur.execute("SELECT * FROM disciplinas ORDER BY nome")
-            linhas = cur.fetchall()
-        return [Disciplina(**linha) for linha in linhas]
+        session = get_session()
 
-    def criar(self, disciplina: Disciplina) -> int:
+        try:
+            resultado = session.execute(text("""
+                    SELECT
+                        id_disciplina,
+                        nome,
+                        carga_horaria,
+                        semestre
+                    FROM disciplinas
+                    ORDER BY nome
+                """))
 
-        with get_cursor(commit=True) as cur:
-            cur.execute(
-                """INSERT INTO disciplinas (nome, codigo)
-                   VALUES (%s, %s) RETURNING id""",
-                (disciplina.nome, disciplina.codigo),
-            )
-            return cur.fetchone()["id"]
+            linhas = resultado.mappings().all()
 
-    def deletar(self, id: int) -> None:
-        
-            with get_cursor(commit=True) as cur:
-                cur.execute("DELETE FROM disciplinas WHERE id = %s", (id,))
+            return [Disciplina(**linha) for linha in linhas]
+        finally:
+            session.close()
+
+
+    def inserir(self, disciplina: Disciplina) -> None:
+
+        session = get_session()
+
+        try:
+            session.execute(text("""
+                    INSERT INTO disciplinas
+                        (nome, carga_horaria, semestre)
+                    VALUES
+                        (:nome, :carga_horaria, :semestre)
+                """),{"nome": disciplina.nome, "carga_horaria": disciplina.carga_horaria,"semestre": disciplina.semestre})
+
+            session.commit()
+
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+
+    def deletar(self, id_disciplina: int) -> None:
+
+        session = get_session()
+
+        try:
+            session.execute(text("""
+                    DELETE
+                    FROM disciplinas
+                    WHERE id_disciplina = :id
+                """), {"id": id_disciplina})
+
+            session.commit()
+
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()

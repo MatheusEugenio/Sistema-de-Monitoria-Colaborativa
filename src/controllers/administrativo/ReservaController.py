@@ -1,8 +1,8 @@
 import pandas as pd
 
 from models import Reserva, ReservaRepository
-import controllers.academico.AlunoController as aluno_controller
-import controllers.monitoria.SessaoController as sessao_controller
+import controllers.academico.AlunoController as AlunoController
+import controllers.monitoria.SessaoController as SessaoController
 
 _repo = ReservaRepository()
 
@@ -25,8 +25,6 @@ def opcoes_sessoes() -> dict:
 
 def registrar(data_reserva: str, status: str, id_aluno: int, id_sessao: int):
     try:
-        if _repo.reservaExiste(id_aluno, data_reserva):
-            return False, "Reserva já registrada para este aluno na data especificada."
             
         _repo.inserir(Reserva(data_reserva=data_reserva, status=status, id_aluno=id_aluno, id_sessao=id_sessao))
         return True, "Reserva registrada."

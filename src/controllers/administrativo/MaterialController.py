@@ -15,8 +15,7 @@ def listar_como_dataframe() -> pd.DataFrame:
 
     dados = _repo.listar()
     if not dados:
-        return pd.DataFrame(columns=["id_material", "titulo", "descricao",
-                                      "tipo_arquivo", "link_arquivo", "usuario_id"])
+        return pd.DataFrame(columns=["id_material", "titulo", "descricao","tipo_arquivo", "link_arquivo", "usuario_id"])
     return pd.DataFrame([m.__dict__ for m in dados])
 
 
@@ -27,8 +26,7 @@ def opcoes_usuarios() -> dict:
 def opcoes_tipos() -> list:
     return TIPOS_ARQUIVO
 
-def publicar(titulo: str, descricao: str, tipo_arquivo: str,
-             link_arquivo: str, usuario_id: int):
+def publicar(titulo: str, descricao: str, tipo_arquivo: str, link_arquivo: str, usuario_id: int):
 
     if not titulo or not link_arquivo:
         return False, "Título e link do arquivo são obrigatórios."

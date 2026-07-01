@@ -1,92 +1,79 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-import psycopg2.extras
-from database.connectection import get_connectection
+from sqlalchemy import text
+from database.connection import get_session
 
 @dataclass
 class Ministra:
 
-    professor_id: Optional[int] = None
-    disciplina_id: Optional[int] = None
+    professor_id: int
+    disciplina_id:int
 
 
 class MinistraRepository:
 
     def jaExiste(self, professor_id: int, disciplina_id: int) -> bool:
-        connect = get_connectection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
-            cursor.execute(
-                "SELECT COUNT(*) FROM ministra WHERE professor_id = %s AND disciplina_id = %s",
-                (professor_id, disciplina_id),
+            result = session.execute(
+                text("SELECT COUNT(*) FROM ministra WHERE professor_id = :professor_id AND disciplina_id = :disciplina_id"),
+                {"professor_id": professor_id, "disciplina_id": disciplina_id}
             )
             
-            count = cursor.fetchone()[0]
-            cursor.close()
+            count = result.fetchone()[0]
             return count > 0
 
         finally:
-            connect.close()
+            session.close()
 
     def listar(self) -> List[Ministra]:
 
-        connect = get_connectection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictcursor)
-        
-            cursor.execute("SELECT * FROM ministra ORDER BY professor_id")
-            linhas = cursor.fetchall()
-            cursor.close()
-        
-            ministras = []
+            result = session.execute(text("SELECT * FROM ministra ORDER BY professor_id"))
+            linhas = result.mappings().all()
 
-            for linha in linhas:
-                ministras.append(Ministra(**linha))
-
-            return ministras
+            return [Ministra(**linha) for linha in linhas]
         finally:
-            connect.close()
- 
+            session.close()
+
     def inserir(self, ministra: Ministra) -> None:
         
-        connect = get_connectection()
-        
+        session = get_session()
+
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute(
-                    "INSERT INTO ministra (professor_id, disciplina_id) VALUES (%s, %s)",
-                    (ministra.professor_id, ministra.disciplina_id),
-                )
-                connect.commit()
-            except Exception:
-                connect.rollback()
-                raise
-            finally:
-                cursor.close()
+            session.execute(
+                text("INSERT INTO ministra (professor_id, disciplina_id) VALUES (:professor_id, :disciplina_id)"),
+                {"professor_id": ministra.professor_id, "disciplina_id": ministra.disciplina_id}
+            )
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
  
     def deletar(self, professor_id: int, disciplina_id: int) -> None:
         
-        connect = get_connectection()
+        session = get_session()
         
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute(
-                    "DELETE FROM ministra WHERE professor_id = %s AND disciplina_id = %s",
-                    (professor_id, disciplina_id),
-                )
-                connect.commit()
-            except Exception:
-                connect.rollback()
-                raise
-            finally:
-                cursor.close()
+
+            session.execute(          
+            text("""
+                DELETE
+                FROM ministra
+                WHERE professor_id = :professor_id
+                  AND disciplina_id = :disciplina_id
+            """),{"professor_id": professor_id,"disciplina_id": disciplina_id})
+
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
  

@@ -1,7 +1,8 @@
 from typing import Optional, List
 from dataclasses import dataclass
-import psycopg2.extras
-from database.connectection import get_connectection
+
+from sqlalchemy import text
+from database.connection import get_session
 
 @dataclass
 class Monitor:
@@ -12,89 +13,66 @@ class Monitor:
 class MonitorRepository:
 
     def buscarPorIdMonitor(self, id_monitor: int) -> Optional[Monitor]:
-        connect = get_connection()
-
+        
+        session = get_session()
+        
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             
-            cursor.execute("SELECT * FROM monitor WHERE id_monitor = %s", (id_monitor,))
+            resultado = session.execute(text("SELECT id_monitor, departamento FROM monitor WHERE id_monitor = :id_monitor"), {"id_monitor": id_monitor})
+            
+            linha = resultado.mappings().first()
 
-            linha = cursor.fetchone()
-            
             return Monitor(**linha) if linha else None
-        finally:
-            cursor.close()
-            connect.close()
-    
-    def listar(self) -> List[Monitor]:
 
-        connect = get_connection()
+        finally:
+            session.close()
+
+    def listar(self) -> List[Monitor]:
+        
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-            cursor.execute("SELECT id_monitor, departamento FROM monitor")
-
-            linhas = cursor.fetchall()
+            resultado = session.execute(text("SELECT id_monitor, departamento FROM monitor"))
             
-            cursor.close()
-
-            return [
-                Monitor(
-                    id_monitor=l["id_monitor"],
-                    departamento=l["departamento"]
-                ) for l in linhas
-            ]
+            linhas = resultado.mappings().all()
+            
+            return [Monitor(**linha) for linha in linhas]
 
         finally:
-            connect.close()
+            session.close()
 
     def inserir(self, monitor: Monitor) -> None:
 
-        connect = get_connection()
-
+        session = get_session()
+        
         try:
-            cursor = connect.cursor()
 
-            if self.buscarPorIdMonitor(monitor.id_monitor):
+            existe = session.execute(text("SELECT 1 FROM monitor WHERE id_monitor = :id_monitor"), {"id_monitor": monitor.id_monitor}).first()
+            
+            if existe:
                 raise ValueError("Monitor já existe.")
+            
+            session.execute(text("INSERT INTO monitor (departamento) VALUES (:departamento)"), {"departamento": monitor.departamento})
 
-            try:
-                cursor.execute(
-                    "INSERT INTO monitor (departamento) VALUES (%s)",
-                    (monitor.departamento,),
-                )
+            session.commit()
 
-                connect.commit()
-
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
 
     def deletar(self, id_monitor: int) -> None:
 
-        connect = get_connection()
-
+        session = get_session()
+        
         try:
-            cursor = connect.cursor()
+            session.execute(text("DELETE FROM monitor WHERE id_monitor = :id_monitor"), {"id_monitor": id_monitor})
 
-            try:
-                cursor.execute("DELETE FROM monitor WHERE id_monitor = %s", (id_monitor,))
+            session.commit()
 
-                connect.commit()
-
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()

@@ -28,10 +28,9 @@ def cadastrar(limite_participantes: int, horario: str, descricao: str, data: str
 
     try:
 
-        _repo.criar(Sessao(
+        _repo.inserir(Sessao(
             limite_participantes=limite_participantes, horario=horario,
-            descricao=descricao, data=data, id_monitoria=id_monitoria,
-        ))
+            descricao=descricao))
         return True, "Sessão criada com sucesso."
 
     except Exception as erro:

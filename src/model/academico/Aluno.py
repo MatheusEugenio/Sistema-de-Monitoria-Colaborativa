@@ -1,7 +1,9 @@
 from typing import Optional, List
 from dataclasses import dataclass
-import psycopg2.extras
-from database.connection import get_connection
+
+from sqlalchemy import text
+
+from database.connection import get_session
 
 @dataclass
 class Aluno:
@@ -13,101 +15,114 @@ class Aluno:
 
 class AlunoRepository:
 
-    def buscarPorIdUsuario(self, id_aluno: int) -> Optional[Aluno]:
-        connect = get_connection()
+    def buscarPorIdAluno(self, id_aluno: int) -> Optional[Aluno]:
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("SELECT * FROM aluno WHERE id_aluno = %s", (id_aluno,))
+            resultado = session.execute(text("""
+                SELECT
+                    id_aluno,
+                    matricula,
+                    cpf,
+                    nome_curso
+                FROM aluno
+                WHERE id_aluno = :id
+                """
+            ),
+            {"id": id_aluno})
 
-            linha = cursor.fetchone()
+            linha = resultado.mappings().first()
             
             return Aluno(**linha) if linha else None
         finally:
-            cursor.close()
-            connect.close()
+            session.close()
    
     def buscarPorMatricula(self, matricula: str) -> Optional[Aluno]:
-        connect = get_connection()
+        
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("SELECT * FROM aluno WHERE matricula = %s", (matricula,))
+            resultado = session.execute(text("SELECT * FROM aluno WHERE matricula = :matricula"), {"matricula": matricula})
 
-            linha = cursor.fetchone()
+            linha = resultado.mappings().first()
             
             return Aluno(**linha) if linha else None
+
         finally:
-            cursor.close()
-            connect.close()
+            session.close()
 
 
     def listar(self) -> List[Aluno]:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            resultado = session.execute(text("""
+                SELECT
+                    id_aluno,
+                    matricula,
+                    cpf,
+                    nome_curso
+                FROM aluno
+                """))
 
-            cursor.execute("SELECT id_aluno, matricula, cpf, nome_curso FROM aluno")
-
-            linhas = cursor.fetchall()
-            cursor.close()
-
-            return [
-                Aluno(
-                    id_aluno=l["id_aluno"],
-                    matricula=l["matricula"],
-                    cpf=l["cpf"],
-                    nome_curso=l["nome_curso"]
-                ) for l in linhas
-            ]
-
+            linhas = resultado.mappings().all()
+            
+            return [Aluno(**linha) for linha in linhas]
         finally:
-            connect.close()
+            session.close()
+
 
     def inserir(self, aluno: Aluno) -> None:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute(
-                    """INSERT INTO aluno (matricula, cpf, nome_curso) 
-                       VALUES (%s, %s, %s)""",
-                    (aluno.matricula, aluno.cpf, aluno.nome_curso),
-                )
-                connect.commit()
+            session.execute(
+                text(
+                    """
+                    INSERT INTO aluno
 
-            except Exception:
-                connect.rollback()
-                raise
+                    (matricula, cpf, nome_curso)
 
-            finally:
-                cursor.close()
+                    VALUES
+
+                    (:matricula, :cpf, :curso)
+                    """
+                ),
+                {"matricula": aluno.matricula,
+                    "cpf": aluno.cpf,
+                    "curso": aluno.nome_curso}
+            )
+
+            session.commit()    
+        except:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
 
     def deletar(self, id_aluno: int) -> None:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute("DELETE FROM aluno WHERE id_aluno = %s", (id_aluno,))
+            session.execute(
+                text(
+                    """
+                    DELETE
+                    FROM aluno
+                    WHERE id_aluno = :id
+                    """
+                ),
+                {"id": id_aluno}
+            )
 
-                connect.commit()
-
-            except Exception:
-                connect.rollback()
-                raise
-                
-            finally:
-                cursor.close()
+            session.commit()
+        except:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
     

@@ -1,8 +1,9 @@
 from typing import Optional, List
 from dataclasses import dataclass
 from datetime import time
-import psycopg2.extras
-from database.connection import get_connection
+
+from sqlalchemy import text
+from database.connection import get_session
 
 @dataclass
 class Turma:
@@ -14,112 +15,123 @@ class Turma:
 
 class TurmaRepository:
 
-    def buscarPorIdTurma(self, id_turma: int) -> Optional[Turma]:       
-            
-        connect = get_connection()
+    def buscarPorIdTurma(self, id_turma: int) -> Optional[Turma]:
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute("SELECT * FROM turma WHERE id_turma = %s", (id_turma,))
+            resultado = session.execute(
+                text("""
+                    SELECT
+                        id_turma,
+                        semestre,
+                        codigo,
+                        horario
+                    FROM turma
+                    WHERE id_turma = :id
+                """),{"id": id_turma})
 
-            linha = cursor.fetchone()
+            linha = resultado.mappings().first()
 
             return Turma(**linha) if linha else None
 
         finally:
-            cursor.close()
-            connect.close()
-            
-    def buscarTurma(self, semestre: str, codigo: str) -> Optional[Turma]:
+            session.close()
 
-        connect = get_connection()
+
+    def buscarTurma(
+        self,
+        semestre: str,
+        codigo: str
+    ) -> Optional[Turma]:
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute(
-                "SELECT id_turma, semestre, codigo, horario FROM turma WHERE semestre = %s AND codigo = %s",
-                (semestre, codigo),
-            )
-            
-            linha = cursor.fetchone()
+            resultado = session.execute(
+                text("""
+                    SELECT
+                        id_turma,
+                        semestre,
+                        codigo,
+                        horario
+                    FROM turma
+                    WHERE semestre = :semestre
+                      AND codigo = :codigo
+                """),{"semestre": semestre,"codigo": codigo})
+
+            linha = resultado.mappings().first()
 
             return Turma(**linha) if linha else None
+
         finally:
-            cursor.close()
-            connect.close()
+            session.close()
 
 
     def listar(self) -> List[Turma]:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute("SELECT id_turma, semestre, codigo, horario FROM turma")
+            resultado = session.execute(
+                text("""
+                    SELECT
+                        id_turma,
+                        semestre,
+                        codigo,
+                        horario
+                    FROM turma
+                    ORDER BY codigo
+                """))
 
-            linhas = cursor.fetchall()
+            linhas = resultado.mappings().all()
 
-            cursor.close()
-
-            return [
-                Turma(
-                    id_turma=l["id_turma"],
-                    semestre=l["semestre"],
-                    codigo=l["codigo"],
-                    horario=l["horario"]
-                ) for l in linhas
-            ]
+            return [Turma(**linha) for linha in linhas]
 
         finally:
-            connect.close()
+            session.close()
+
 
     def inserir(self, turma: Turma) -> None:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
+            session.execute(
+                text("""
+                    INSERT INTO turma
+                        (semestre, codigo, horario)
+                    VALUES
+                        (:semestre, :codigo, :horario)
+                """),{"semestre": turma.semestre,"codigo": turma.codigo,"horario": turma.horario})
 
-            try:
-                cursor.execute(
-                    """INSERT INTO turma (semestre, codigo, horario) 
-                       VALUES (%s, %s, %s)""",
-                    (turma.semestre, turma.codigo, turma.horario),
-                )
+            session.commit()
 
-                connect.commit()
-
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
+
 
     def deletar(self, id_turma: int) -> None:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
+            session.execute(text("""
+                    DELETE
+                    FROM turma
+                    WHERE id_turma = :id
+                """),{"id": id_turma})
 
-            try:
-                cursor.execute("DELETE FROM turma WHERE id_turma = %s", (id_turma,))
+            session.commit()
 
-                connect.commit()
-                
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-                
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()

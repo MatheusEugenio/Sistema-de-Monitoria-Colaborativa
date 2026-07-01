@@ -2,8 +2,9 @@ from typing import Optional, List
 from dataclasses import dataclass
 from datetime import time, date
 from enum import IntEnum
-import psycopg2.extras
-from database.connectection import get_connection
+
+from sqlalchemy import text
+from database.connection import get_session
 
 class DiaSemana(IntEnum):
     SEGUNDA = 0
@@ -14,6 +15,7 @@ class DiaSemana(IntEnum):
     SABADO = 5
     DOMINGO = 6
 
+
 @dataclass
 class Disponibilidade:
 
@@ -22,150 +24,87 @@ class Disponibilidade:
     horario_fim: time
     data_inicio: date
     data_fim: date
-    dia_semana: DiaSemana.SEGUNDA
+    dia_semana: DiaSemana
 
 class DisponibilidadeRepository:
 
+    # para evitar repeticao de retorno do objeto disponibilidade
+    def _map(self, l):
+        return Disponibilidade(
+            id_disponibilidade=l["id_disponibilidade"],
+            horario_inicio=l["horario_inicio"],
+            horario_fim=l["horario_fim"],
+            data_inicio=l["data_inicio"],
+            data_fim=l["data_fim"],
+            dia_semana=DiaSemana(l["dia_semana"])
+        )
+
     def buscarDisponibilidadePorId(self, id_disponibilidade: int) -> Optional[Disponibilidade]:
-
-        connect = get_connection()
-
+        
+        session = get_session()
+        
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-            cursor.execute("""
-                SELECT id_disponibilidade, horario_inicio, horario_fim, 
-                       data_inicio, data_fim, dia_semana 
-                FROM disponibilidade
-                WHERE id_disponibilidade = %s
-            """, (id_disponibilidade,))
-
-            linha = cursor.fetchone()
-
-            cursor.close()
-
-            if linha:
-                return Disponibilidade(
-                    id_disponibilidade=linha["id_disponibilidade"],
-                    horario_inicio=linha["horario_inicio"],
-                    horario_fim=linha["horario_fim"],
-                    data_inicio=linha["data_inicio"],
-                    data_fim=linha["data_fim"],
-                    dia_semana=DiaSemana(linha["dia_semana"])
-                )
-            return None
             
+            resultado = session.execute(text("SELECT id_disponibilidade, horario_inicio, horario_fim, data_inicio, data_fim, dia_semana FROM disponibilidade WHERE id_disponibilidade = :id_disponibilidade"), {"id_disponibilidade": id_disponibilidade})
+           
+            linha = resultado.mappings().first()
+            
+           return [self._map(l) for l in linhas]
         finally:
-            connect.close()
-            
-    def buscarPorData_hora(self, horario_inicio: time, horario_fim: time, data_inicio: date, data_fim: date) -> List[Disponibilidade]:
-        connect = get_connection()
+            session.close()
 
+    def buscarPorData_hora(self,horario_inicio: time, horario_fim: time, data_inicio: date, data_fim: date) -> List[Disponibilidade]:
+        
+        session = get_session()
+        
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            resultado = session.execute(text("SELECT id_disponibilidade, horario_inicio, horario_fim, data_inicio, data_fim, dia_semana FROM disponibilidade"))
 
-            cursor.execute("""
-                SELECT id_disponibilidade, horario_inicio, horario_fim, 
-                       data_inicio, data_fim, dia_semana 
-                FROM disponibilidade
-                WHERE data_inicio <= CURRENT_DATE AND data_fim >= CURRENT_DATE
-                      AND horario_inicio <= CURRENT_TIME AND horario_fim >= CURRENT_TIME
-            """)
-
-            linhas = cursor.fetchall()
-
-            cursor.close()
-
-            return [
-                Disponibilidade(
-                    id_disponibilidade=l["id_disponibilidade"],
-                    horario_inicio=l["horario_inicio"],
-                    horario_fim=l["horario_fim"],
-                    data_inicio=l["data_inicio"],
-                    data_fim=l["data_fim"],
-                    dia_semana=DiaSemana(l["dia_semana"])
-                ) for l in linhas
-            ]
+            linhas = resultado.mappings().all()
             
+           return [self._map(l) for l in linhas]
         finally:
-            connect.close()
+            session.close()
 
     def listar(self) -> List[Disponibilidade]:
-
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-            cursor.execute("""
-                SELECT id_disponibilidade, horario_inicio, horario_fim, 
-                       data_inicio, data_fim, dia_semana 
-                FROM disponibilidade
-            """)
-
-            linhas = cursor.fetchall()
-
-            cursor.close()
-
-            return [
-                Disponibilidade(
-                    id_disponibilidade=l["id_disponibilidade"],
-                    horario_inicio=l["horario_inicio"],
-                    horario_fim=l["horario_fim"],
-                    data_inicio=l["data_inicio"],
-                    data_fim=l["data_fim"],
-                    dia_semana=DiaSemana(l["dia_semana"])
-                ) for l in linhas
-            ]
+            resultado = session.execute(text("SELECT id_disponibilidade, horario_inicio, horario_fim, data_inicio, data_fim, dia_semana FROM disponibilidade"))
             
+            linhas = resultado.mappings().all()
+
+            return [self._map(l) for l in linhas]
         finally:
-            connect.close()
+            session.close()
 
     def inserir(self, disp: Disponibilidade) -> None:
-
-        connect = get_connection()
-
+        
+        session = get_session()
+        
         try:
-            cursor = connect.cursor()
             
-            try:
-                cursor.execute(
-                    """INSERT INTO disponibilidade (horario_inicio, horario_fim, data_inicio, data_fim, dia_semana) 
-                       VALUES (%s, %s, %s, %s, %s)""",
-                    (disp.horario_inicio, disp.horario_fim, disp.data_inicio, 
-                     disp.data_fim, disp.dia_semana.value),
-                )
-                
-                connect.commit()
-
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-
+            session.execute(text("INSERT INTO disponibilidade (horario_inicio, horario_fim, data_inicio, data_fim, dia_semana) VALUES (:horario_inicio, :horario_fim, :data_inicio, :data_fim, :dia_semana)"), {"horario_inicio": disp.horario_inicio, "horario_fim": disp.horario_fim, "data_inicio": disp.data_inicio, "data_fim": disp.data_fim, "dia_semana": disp.dia_semana.value})
+            
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
 
     def deletar(self, id_disponibilidade: int) -> None:
-
-        connect = get_connection()
-
+        
+        session = get_session()
+        
         try:
-            cursor = connect.cursor()
+            
+            session.execute(text("DELETE FROM disponibilidade WHERE id_disponibilidade = :id_disponibilidade"), {"id_disponibilidade": id_disponibilidade})
+            
+            session.commit()
 
-            try:
-                cursor.execute("DELETE FROM disponibilidade WHERE id_disponibilidade = %s", (id_disponibilidade,))
-
-                connect.commit()
-
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()

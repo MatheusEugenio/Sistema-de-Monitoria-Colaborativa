@@ -1,9 +1,9 @@
 from typing import Optional, List
 from dataclasses import dataclass
-
-import psycopg2.extras
 from datetime import date
-from database.connection import get_connection
+
+from sqlalchemy import text
+from database.connection import get_session
 
 @dataclass
 class FilaEspera:
@@ -17,76 +17,56 @@ class FilaEsperaRepository:
 
     def existe(self, id_aluno: int, id_sessao: int) -> bool:
         
-        connect = get_connection()
+        session = get_session()
+
         try:
-            cursor = connect.cursor()
-            cursor.execute(
-                "SELECT 1 FROM fila_espera WHERE id_aluno = %s AND id_sessao = %s",
-                (id_aluno, id_sessao)
-            )
-            return cursor.fetchone() is not None 
+            resultado = session.execute(text("SELECT 1 FROM fila_espera WHERE id_aluno = :id_aluno AND id_sessao = :id_sessao"), {"id_aluno": id_aluno, "id_sessao": id_sessao})
+            
+            return resultado.first() is not None
         finally:
-            connect.close()
+            session.close()
 
-    def listar() List[FilaEspera]:
+    def listar(self) -> List[FilaEspera]:
+        
+        session = get_session()
 
-        connect = get_connection()
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            resultado = session.execute(text("SELECT data_entrada, posicao_na_fila, id_aluno, id_sessao FROM fila_espera ORDER BY data_entrada"))
             
-            cursor.execute("SELECT * FROM fila_espera ORDER BY data_entrada")
-            
-            linhas = cursor.fetchall()
-            
-            cursor.close()
+            linhas = resultado.mappings().all()
 
-            filas_espera = []
-
-            for linha in linhas:
-                filas_espera.append(FilaEspera(**linha))
-
-            return filas_espera
+            return [FilaEspera(**linha) for linha in linhas]
         finally:
-            connect.close()
+            session.close()
 
     def inserir(self, fila_espera: FilaEspera) -> None:
 
-        connect = get_connection()
-        
+        session = get_session()
+
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute(
-                    """INSERT INTO fila_espera (data_entrada, id_aluno, id_sessao)
-                       VALUES (%s, %s, %s)""",
-                    (fila_espera.data_entrada, fila_espera.id_aluno, fila_espera.id_sessao),
-                )
-                connect.commit()
-            except Exception:
-                connect.rollback()
-                raise
-            finally:
-                cursor.close()
+
+            session.execute(text("INSERT INTO fila_espera (data_entrada, id_aluno, id_sessao) VALUES (:data_entrada, :id_aluno, :id_sessao)"), {"data_entrada": fila_espera.data_entrada, "id_aluno": fila_espera.id_aluno, "id_sessao": fila_espera.id_sessao})
+
+            session.commit()
+
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
 
     def deletar(self, id_aluno: int, id_sessao: int) -> None:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute(
-                    "DELETE FROM fila_espera WHERE id_aluno = %s AND id_sessao = %s",
-                    (id_aluno, id_sessao),
-                )
-                connect.commit()
-            except Exception:
-                connect.rollback()
-                raise
-            finally:
-                cursor.close()
-        finally:
-            connect.close()
 
+            session.execute(text("DELETE FROM fila_espera WHERE id_aluno = :id_aluno AND id_sessao = :id_sessao"), {"id_aluno": id_aluno, "id_sessao": id_sessao})
+
+            session.commit()
+
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()

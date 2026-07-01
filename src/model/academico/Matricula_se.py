@@ -1,8 +1,9 @@
 from typing import List, Optional
 from dataclasses import dataclass
 
-import psycopg2.extras
-from database.connectection import get_connectection
+from sqlalchemy import text
+
+from database.connection import get_session
 
 @dataclass
 class Matricula_se:
@@ -11,74 +12,87 @@ class Matricula_se:
     disciplina_id: Optional[int] = None
     turma_id: Optional[int] = None
 
-class Matricula_seRepository:
+class MatriculaSeRepository:
 
-    def 
+    def buscar(self, id_aluno: int, id_disciplina: int, id_turma: int)-> Optional[MatriculaSe]:
 
+    session = get_session()
+
+    try:
+        resultado = session.execute(text("""SELECT id_aluno,
+                    id_disciplina,
+                    id_turma
+                FROM matricula_se
+                WHERE id_aluno = :id_aluno
+                  AND id_disciplina = :id_disciplina
+                  AND id_turma = :id_turma
+            """), {"id_aluno": id_aluno,"id_disciplina": id_disciplina, "id_turma": id_turma
+            })
+
+        linha = resultado.mappings().first()
+
+        return MatriculaSe(**linha) if linha else None
+
+    finally:
+        session.close()
 
     def listar(self) -> List[MatriculaSe]:
+        session = get_session()
 
-        connect = get_connectection()
-        
         try:
+            resultado = session.execute(text("""
+                    SELECT
+                        id_aluno,
+                        id_disciplina,
+                        id_turma
+                    FROM matricula_se
+                    ORDER BY id_aluno
+                """))
 
-            cursor = connect.cursorsor(cursorsor_factory=psycopg2.extras.RealDictcursorsor)
+            linhas = resultado.mappings().all()
 
-            cursor.execute("SELECT * FROM matricula_se ORDER BY id_aluno")
+            return [MatriculaSe(**linha) for linha in linhas]
 
-            linhas = cursor.fetchall()
-            cursor.close()
-
-            matriculas_se = []
-
-            for linha in linhas:
-                matriculas_se.append(MatriculaSe(**linha))
-            
-            return matriculas_se
         finally:
-            connect.close()
- 
-    def criar(self, matricula_se: MatriculaSe) -> None:
-        
-        connect = get_connectection()
-        
+            session.close()
+
+    def inserir(self, matricula: MatriculaSe) -> None:
+
+        session = get_session()
+
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute(
-                    """INSERT INTO matricula_se (id_aluno, id_disciplina, id_turma)
-                       VALUES (%s, %s, %s)""",
-                    (matricula_se.id_aluno, matricula_se.id_disciplina, matricula_se.id_turma),
-                )
+            session.execute(text("""
+                    INSERT INTO matricula_se
+                        (id_aluno, id_disciplina, id_turma)
+                    VALUES
+                        (:id_aluno, :id_disciplina, :id_turma)
+                """),{"id_aluno": matricula.id_aluno,"id_disciplina": matricula.id_disciplina,"id_turma": matricula.id_turma})
 
-                connect.commit()
+            session.commit()
 
-            except Exception:
-                connect.rollback()
-                raise
-            finally:
-                cursor.close()
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
- 
+            session.close()
+
     def deletar(self, id_aluno: int, id_disciplina: int, id_turma: int) -> None:
-        
-        connect = get_connectection()
-        
+
+        session = get_session()
+
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute(
-                    """DELETE FROM matricula_se
-                       WHERE id_aluno = %s AND id_disciplina = %s AND id_turma = %s""",
-                    (id_aluno, id_disciplina, id_turma),
-                )
-                connect.commit()
-            except Exception:
-                connect.rollback()
-                raise
-            finally:
-                cursor.close()
+            session.execute(text("""
+                    DELETE
+                    FROM matricula_se
+                    WHERE id_aluno = :id_aluno
+                      AND id_disciplina = :id_disciplina
+                      AND id_turma = :id_turma
+                """),{"id_aluno": id_aluno,"id_disciplina": id_disciplina, "id_turma": id_turma})
+
+            session.commit()
+
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
- 
+            session.close()

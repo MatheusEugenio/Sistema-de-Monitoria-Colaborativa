@@ -34,6 +34,9 @@ def matricular(id_aluno: int, id_disciplina: int, id_turma: int):
 
     try:
 
+        if _repo.buscar(id_aluno, id_disciplina, id_turma):
+            return False, "Aluno já matriculado nesta disciplina e turma."
+            
         _repo.inserir(MatriculaSe(id_aluno=id_aluno, id_disciplina=id_disciplina, id_turma=id_turma))
         return True, "Aluno matriculado com sucesso."
 
@@ -46,5 +49,6 @@ def remover(id_aluno: int, id_disciplina: int, id_turma: int):
     try:
         _repo.deletar(id_aluno, id_disciplina, id_turma)
         return True, "Matrícula removida."
+
     except Exception as erro:
         return False, f"Erro: {erro}"

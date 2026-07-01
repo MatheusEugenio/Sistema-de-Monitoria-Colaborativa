@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from database.connection import get_connection
-import psycopg2.extras
+from sqlalhcemy import text
+from database.connection import get_session
 
 @dataclass
 class Usuario:
@@ -11,101 +11,88 @@ class Usuario:
     email: str
 
 class UsuarioRepository:
-    
+
     def buscarPorId(self, id_user: int) -> Optional[Usuario]:
-        connect = get_connection()
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("SELECT * FROM usuario WHERE id_user = %s", (id_user,))
 
-            linha = cursor.fetchone()
-            
+            resultado = session.execute(text("SELECT id_user, nome, email FROM usuario WHERE id_user = :id"), {"id": id_user})
+
+            linha = resultado.mappings().first()
+
             return Usuario(**linha) if linha else None
+
         finally:
-            cursor.close()
-            connect.close()
+            session.close()
+
 
     def existePorEmail(self, email: str) -> bool:
-        
-        connect = get_connection()
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("SELECT 1 FROM usuario WHERE email = %s", (email,))
 
-            return cursor.fetchone() is not None
+            resultado = session.execute(text("SELECT COUNT(*) FROM usuario WHERE email = :email"), {"email": email})
+
+            return resultado.scalar() > 0
+
         finally:
-            cursor.close()
-            connect.close()
+            session.close()
 
 
     def listarUsuarios(self) -> List[Usuario]:
 
-        connect = get_connection()  
+        session = get_session()
+
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("SELECT * FROM usuario ORDER BY nome")
-            
-            linhas = cursor.fetchall()
-            
-            cursor.close()
+
+            resultado = session.execute(text("SELECT id_user, nome, email FROM usuario ORDER BY nome"))
+
+            linhas = resultado.mappings().all()
 
             return [Usuario(**linha) for linha in linhas]
-          
+
         finally:
-            connect.close()
+            session.close()
+
 
     def inserir(self, usuario: Usuario) -> int:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            try:
-                cursor.execute(
-                    "INSERT INTO usuario (nome, email) VALUES (%s, %s) RETURNING id_user",
-                    (usuario.nome, usuario.email),
-                )
-                novo_id = cursor.fetchone()["id_user"]
-                connect.commit()
-                return novo_id
+            resultado = session.execute(text("INSERT INTO usuario (nome, email) VALUES (:nome, :email) RETURNING id_user"), {"nome": usuario.nome, "email": usuario.email})
 
-            except Exception:
-                connect.rollback()
-                raise
+            novo_id = resultado.scalar()
 
-            finally:
-                cursor.close()
+            session.commit()
 
+            return novo_id
+
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()   
+            session.close()
+
 
     def deletar(self, id_user: int) -> None:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            try:
-                cursor.execute("delete from usuario where id_user = %s", (id_user,))
+            session.execute(text("DELETE FROM usuario WHERE id_user = :id"), {"id": id_user})
 
-                connect.commit()
-            except Exception:   
-                connect.rollback()
-                raise
-            
-            finally:
-                cursor.close()
+            session.commit()
 
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
-
-
+            session.close()
 
  
