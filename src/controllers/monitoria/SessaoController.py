@@ -1,7 +1,7 @@
 import pandas as pd
 
 from models import Sessao, SessaoRepository
-import controllers.MonitoriaController as monitoria_controller
+import controllers.monitoria.MonitoriaController as monitoria_controller
 
 _repo = SessaoRepository()
 

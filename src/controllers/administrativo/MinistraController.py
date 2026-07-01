@@ -1,8 +1,8 @@
 import pandas as pd
 
 from models import Ministra, MinistraRepository
-import controllers.professor_controller as professor_controller
-import controllers.disciplina_controller as disciplina_controller
+import controllers.administrativo.ProfessorController as professor_controller
+import controllers.academico.DisciplinaController as disciplina_controller
 
 _repo = MinistraRepository()
 

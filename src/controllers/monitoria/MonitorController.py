@@ -1,7 +1,7 @@
 import pandas as pd
 
 from models import Monitor, MonitorRepository
-import controllers.AlunoController as aluno_controller
+import controllers.academico.AlunoController as aluno_controller
 
 _repo = MonitorRepository()
 

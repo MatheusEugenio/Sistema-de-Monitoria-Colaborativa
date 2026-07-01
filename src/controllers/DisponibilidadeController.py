@@ -1,7 +1,7 @@
 import pandas as pd
 
 from models import Disponibilidade, DisponibilidadeRepository
-import controllers.MonitorController as monitor_controller
+import controllers.monitoria.MonitorController as monitor_controller
 
 repo = DisponibilidadeRepository()
 

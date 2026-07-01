@@ -1,8 +1,8 @@
 import pandas as pd
 
 from models import Validacao, ValidacaoRepository
-import controllers.ProfessorController as professor_controller
-import controllers.MonitorController as monitor_controller
+import controllers.administrativo.ProfessorController as professor_controller
+import controllers.monitoria.MonitorController as monitor_controller
 
 _repo = ValidacaoRepository()
 

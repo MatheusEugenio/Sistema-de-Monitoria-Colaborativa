@@ -1,8 +1,8 @@
 import pandas as pd
 
 from models import Monitoria, MonitoriaRepository
-import controllers.MonitorController as monitor_controller
-import controllers.DisciplinaController as disciplina_controller
+import controllers.monitoria.MonitorController as monitor_controller
+import controllers.academico.DisciplinaController as disciplina_controller
 
 _repo = MonitoriaRepository()
 

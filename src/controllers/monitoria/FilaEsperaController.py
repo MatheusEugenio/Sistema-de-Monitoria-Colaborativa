@@ -1,7 +1,7 @@
 import pandas as pd
 from models import FilaEspera, FilaEsperaRepository
-import controllers.AlunoController as aluno_controller
-import controllers.SessaoController as sessao_controller
+import controllers.academico.AlunoController as aluno_controller
+import controllers.monitoria.SessaoController as sessao_controller
 
 _repo = FilaEsperaRepository()
 
