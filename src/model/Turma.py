@@ -14,6 +14,43 @@ class Turma:
 
 class TurmaRepository:
 
+    def buscarPorIdTurma(self, id_turma: int) -> Optional[Turma]:       
+            
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            cursor.execute("SELECT * FROM turma WHERE id_turma = %s", (id_turma,))
+
+            linha = cursor.fetchone()
+
+            return Turma(**linha) if linha else None
+
+        finally:
+            cursor.close()
+            connect.close()
+            
+    def buscarTurma(self, semestre: str, codigo: str) -> Optional[Turma]:
+
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            cursor.execute(
+                "SELECT id_turma, semestre, codigo, horario FROM turma WHERE semestre = %s AND codigo = %s",
+                (semestre, codigo),
+            )
+            
+            linha = cursor.fetchone()
+
+            return Turma(**linha) if linha else None
+        finally:
+            cursor.close()
+            connect.close()
+
+
     def listar(self) -> List[Turma]:
 
         connect = get_connection()

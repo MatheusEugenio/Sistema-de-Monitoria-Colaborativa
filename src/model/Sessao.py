@@ -14,28 +14,36 @@ class Sessao:
 
 class SessaoRepository:
 
-    def listar(self) -> List[Sessao]:
+    def buscarPorIdSessao(self, id_sessao: int) -> Optional[Sessao]:
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            cursor.execute("SELECT * FROM sessao WHERE id_sessao = %s", (id_sessao,))
+
+            linha = cursor.fetchone()
+
+            return Sessao(**linha) if linha else None
+
+        finally:
+            cursor.close()
+            connect.close()
+            
+    def buscarSessao(self, id_sessao: int, horario: time) -> Optional[Sessao]:
         
         connect = get_connection()
 
         try:
             cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute("SELECT id_sessao, limite_participantes, horario, descricao FROM sessao")
+            cursor.execute("SELECT id_sessao, limite_participantes, horario, descricao FROM sessao WHERE id_sessao = %s AND horario = %s", (id_sessao, horario))
 
-            linhas = cursor.fetchall()
+            linha = cursor.fetchone()
 
             cursor.close()
 
-
-            return [
-                Sessao(
-                    id_sessao=l["id_sessao"],
-                    limite_participantes=l["limite_participantes"],
-                    horario=l["horario"],
-                    descricao=l["descricao"]
-                ) for l in linhas
-            ]
+            return Sessao(**linha) if linha else None
 
         finally:
             connect.close()
@@ -47,6 +55,9 @@ class SessaoRepository:
         try:
             cursor = connect.cursor()
 
+            if self.buscarSessao(sessao.id_sessao, sessao.horario):
+                raise ValueError(f"Sessão com ID {sessao.id_sessao} e horário {sessao.horario} já existe.")
+                
             try:
                 cursor.execute(
                     """INSERT INTO sessao (limite_participantes, horario, descricao) 

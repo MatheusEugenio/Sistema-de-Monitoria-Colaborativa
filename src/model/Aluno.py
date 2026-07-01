@@ -10,9 +10,39 @@ class Aluno:
     matricula: str
     cpf: str
     nome_curso: str
-    #id_usuario: Optional[int] = None
 
 class AlunoRepository:
+
+    def buscarPorIdUsuario(self, id_aluno: int) -> Optional[Aluno]:
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            
+            cursor.execute("SELECT * FROM aluno WHERE id_aluno = %s", (id_aluno,))
+
+            linha = cursor.fetchone()
+            
+            return Aluno(**linha) if linha else None
+        finally:
+            cursor.close()
+            connect.close()
+   
+    def buscarPorMatricula(self, matricula: str) -> Optional[Aluno]:
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            
+            cursor.execute("SELECT * FROM aluno WHERE matricula = %s", (matricula,))
+
+            linha = cursor.fetchone()
+            
+            return Aluno(**linha) if linha else None
+        finally:
+            cursor.close()
+            connect.close()
+
 
     def listar(self) -> List[Aluno]:
 

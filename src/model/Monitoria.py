@@ -13,6 +13,21 @@ class Monitoria:
 
 class MonitoriaRepository:
 
+    def buscarPorIdMonitoria(self, id_monitoria: int) -> Optional[Monitoria]:
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            
+            cursor.execute("SELECT * FROM monitorias WHERE id = %s", (id_monitoria,))
+
+            linha = cursor.fetchone()
+            
+            return Monitoria(**linha) if linha else None
+        finally:
+            cursor.close()
+            connect.close()
+   
     def listar(self) -> List[Monitoria]:
 
         connect = get_connection()
@@ -47,7 +62,10 @@ class MonitoriaRepository:
 
         try:
             cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
+                
+            if self.buscarPorIdMonitoria(monitoria.id_monitoria): 
+                raise ValueError(f"Monitoria com ID {monitoria.id_monitoria} já existe.")
+                
             try:
                 cursor.execute(
                     """INSERT INTO monitorias (monitor_id, disciplina_id)
