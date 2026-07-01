@@ -11,6 +11,42 @@ class Disciplina:
 
 class DisciplinaRepository(RepositorioBase):
 
+    def buscarDisciplinaPorId(self, id_disciplina: int) -> Optional[Disciplina]:
+        
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            
+            cursor.execute("SELECT * FROM disciplinas WHERE id_disciplina = %s", (id_disciplina,))
+
+            linha = cursor.fetchone()
+            
+            return Disciplina(**linha) if linha else None
+
+        finally:
+            cursor.close()
+            connect.close()
+
+
+    def buscarDisciplina(self, nome: str, carga_horaria: int, semestre: str) -> Optional[Disciplina]:
+
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            
+            cursor.execute("SELECT * FROM disciplinas WHERE nome = %s AND carga_horaria = %s AND semestre = %s", (nome, carga_horaria, semestre))
+
+            linha = cursor.fetchone()
+            
+            return Disciplina(**linha) if linha else None
+
+        finally:
+            cursor.close()
+            connect.close()
+
+
     def listar(self) -> List[Disciplina]:
 
         with get_cursor() as cur:

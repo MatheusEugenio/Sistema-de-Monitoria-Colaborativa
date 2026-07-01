@@ -15,6 +15,19 @@ class FilaEspera:
   
 class FilaEsperaRepository:
 
+    def existe(self, id_aluno: int, id_sessao: int) -> bool:
+        
+        connect = get_connection()
+        try:
+            cursor = connect.cursor()
+            cursor.execute(
+                "SELECT 1 FROM fila_espera WHERE id_aluno = %s AND id_sessao = %s",
+                (id_aluno, id_sessao)
+            )
+            return cursor.fetchone() is not None 
+        finally:
+            connect.close()
+
     def listar() List[FilaEspera]:
 
         connect = get_connection()

@@ -13,6 +13,9 @@ class Matricula_se:
 
 class Matricula_seRepository:
 
+    def 
+
+
     def listar(self) -> List[MatriculaSe]:
 
         connect = get_connectection()

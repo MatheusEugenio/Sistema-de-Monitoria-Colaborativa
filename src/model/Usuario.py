@@ -12,7 +12,37 @@ class Usuario:
 
 class UsuarioRepository:
     
-    def listarUsuarios(self, tipo: str = None) -> List[Usuario]:
+    def buscarPorId(self, id_user: int) -> Optional[Usuario]:
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            
+            cursor.execute("SELECT * FROM usuario WHERE id_user = %s", (id_user,))
+
+            linha = cursor.fetchone()
+            
+            return Usuario(**linha) if linha else None
+        finally:
+            cursor.close()
+            connect.close()
+
+    def existePorEmail(self, email: str) -> bool:
+        
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            
+            cursor.execute("SELECT 1 FROM usuario WHERE email = %s", (email,))
+
+            return cursor.fetchone() is not None
+        finally:
+            cursor.close()
+            connect.close()
+
+
+    def listarUsuarios(self) -> List[Usuario]:
 
         connect = get_connection()  
         try:

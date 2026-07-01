@@ -11,6 +11,21 @@ class Monitor:
 
 class MonitorRepository:
 
+    def buscarPorIdMonitor(self, id_monitor: int) -> Optional[Monitor]:
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            
+            cursor.execute("SELECT * FROM monitor WHERE id_monitor = %s", (id_monitor,))
+
+            linha = cursor.fetchone()
+            
+            return Monitor(**linha) if linha else None
+        finally:
+            cursor.close()
+            connect.close()
+    
     def listar(self) -> List[Monitor]:
 
         connect = get_connection()
@@ -40,6 +55,9 @@ class MonitorRepository:
 
         try:
             cursor = connect.cursor()
+
+            if self.buscarPorIdMonitor(monitor.id_monitor):
+                raise ValueError("Monitor já existe.")
 
             try:
                 cursor.execute(

@@ -13,6 +13,23 @@ class Ministra:
 
 class MinistraRepository:
 
+    def jaExiste(self, professor_id: int, disciplina_id: int) -> bool:
+        connect = get_connectection()
+
+        try:
+            cursor = connect.cursor()
+            cursor.execute(
+                "SELECT COUNT(*) FROM ministra WHERE professor_id = %s AND disciplina_id = %s",
+                (professor_id, disciplina_id),
+            )
+            
+            count = cursor.fetchone()[0]
+            cursor.close()
+            return count > 0
+
+        finally:
+            connect.close()
+
     def listar(self) -> List[Ministra]:
 
         connect = get_connectection()

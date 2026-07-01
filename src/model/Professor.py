@@ -11,6 +11,21 @@ class Professor:
 
 class ProfessorRepository:
 
+    def buscarPorIdProfessor(self, id_professor: int) -> Optional[Professor]:
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            
+            cursor.execute("SELECT * FROM professor WHERE id_professor = %s", (id_professor,))
+
+            linha = cursor.fetchone()
+            
+            return Professor(**linha) if linha else None
+        finally:
+            cursor.close()
+            connect.close()
+            
     def listar(self) -> List[Professor]:
 
         connect = get_connection()
@@ -41,6 +56,9 @@ class ProfessorRepository:
         try:
             cursor = connect.cursor()
 
+            if self.buscarPorIdProfessor(professor.id_professor):
+                raise ValueError("Professor já cadastrado.")
+                
             try:
                 cursor.execute(
                     "INSERT INTO professor (departamento) VALUES (%s)",

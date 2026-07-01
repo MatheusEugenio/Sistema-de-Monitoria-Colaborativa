@@ -14,6 +14,44 @@ class Aviso:
 
 class AvisoRepository:
 
+    def buscarAvisoPorId(self, id_aviso: int) -> Optional[Aviso]:
+        
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            cursor.execute(
+                "SELECT id_aviso, titulo, descricao, data_publicacao FROM aviso WHERE id_aviso = %s",
+                (id_aviso,),
+            )
+            
+            linha = cursor.fetchone()
+
+            return Aviso(**linha) if linha else None
+        finally:
+            cursor.close()
+            connect.close()
+
+    def buscarAviso(self, titulo: str, descricao: str) -> Optional[Aviso]:
+        
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            cursor.execute(
+                "SELECT id_aviso, titulo, descricao, data_publicacao FROM aviso WHERE titulo = %s AND descricao = %s",
+                (titulo, descricao),
+            )
+            
+            linha = cursor.fetchone()
+
+            return Aviso(**linha) if linha else None
+        finally:
+            cursor.close()
+            connect.close()
+
     def listar(self) -> List[Aviso]:
 
         connect = get_connection()

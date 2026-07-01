@@ -14,6 +14,22 @@ class ValidacaoProfessorMonitor:
   
 class ValidacaoProfessorMonitorRepository:
 
+    def buscarPorIdValidacao(self, id_validacao: int) -> Optional[ValidacaoProfessorMonitor]:
+        connect = get_connection()
+
+        try:
+            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            cursor.execute("SELECT * FROM validacao_professor_monitor WHERE id_validacao = %s", (id_validacao,))
+
+            linha = cursor.fetchone()
+
+            return ValidacaoProfessorMonitor(**linha) if linha else None
+
+        finally:
+            cursor.close()
+            connect.close()
+
     def listar(self) -> List[ValidacaoProfessorMonitor]:
 
         connect = get_connection()
