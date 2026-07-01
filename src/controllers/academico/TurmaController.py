@@ -33,7 +33,7 @@ def cadastrar(semestre: str, codigo: str, disciplina_id: int, horario: str):
             return False, "Turma já cadastrada."
 
         _repo.inserir(Turma(semestre=semestre, codigo=codigo, disciplina_id=disciplina_id, horario=horario))
-        return True, "✅ Turma criada com sucesso."
+        return True, "Turma criada com sucesso."
 
     except Exception as erro:
         return False, f"Erro: {erro}"

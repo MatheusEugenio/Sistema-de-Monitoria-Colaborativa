@@ -1,8 +1,9 @@
 from typing import Optional, List
 from dataclasses import dataclass
 from datetime import date, time
-import psycopg2.extras
-from database.connection import get_connection
+
+from sqlalchemy import text
+from database.connection import get_session
 
 @dataclass
 class ValidacaoProfessorMonitor:
@@ -15,94 +16,62 @@ class ValidacaoProfessorMonitor:
 class ValidacaoProfessorMonitorRepository:
 
     def buscarPorIdValidacao(self, id_validacao: int) -> Optional[ValidacaoProfessorMonitor]:
-        connect = get_connection()
+        
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-            cursor.execute("SELECT * FROM validacao_professor_monitor WHERE id_validacao = %s", (id_validacao,))
-
-            linha = cursor.fetchone()
-
+            resultado = session.execute(text("SELECT id_validacao, data_validacao, total_horas, status FROM validacao_professor_monitor WHERE id_validacao = :id"), {"id": id_validacao})
+            
+            linha = resultado.mappings().first()
+            
             return ValidacaoProfessorMonitor(**linha) if linha else None
-
         finally:
-            cursor.close()
-            connect.close()
+            session.close()
 
     def listar(self) -> List[ValidacaoProfessorMonitor]:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            resultado = session.execute(text("SELECT id_validacao, data_validacao, total_horas, status FROM validacao_professor_monitor ORDER BY data_validacao DESC"))
+            
+            linhas = resultado.mappings().all()
 
-            cursor.execute("""
-                SELECT id_validacao, data_validacao, total_horas, status 
-                FROM validacao_professor_monitor
-            """)
-
-            linhas = cursor.fetchall()
-
-            cursor.close()
-
-            return [
-                ValidacaoProfessorMonitor(
-                    id_validacao=l["id_validacao"],
-                    data_validacao=l["data_validacao"],
-                    total_horas=l["total_horas"],
-                    status=l["status"]
-                ) for l in linhas
-            ]
-
+            return [ValidacaoProfessorMonitor(**linha) for linha in linhas]
         finally:
-            connect.close()
+            session.close()
 
-    def inserir(self, validacao: ValidacaoProfessorMonitor) -> None:
+    def inserir(self, validacao: ValidacaoProfessorMonitor) -> int:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
+            resultado = session.execute(text("INSERT INTO validacao_professor_monitor (data_validacao, total_horas, status) VALUES (:data_validacao, :total_horas, :status) RETURNING id_validacao"), {"data_validacao": validacao.data_validacao, "total_horas": validacao.total_horas, "status": validacao.status})
 
-            try:
-                cursor.execute(
-                    """INSERT INTO validacao_professor_monitor (data_validacao, total_horas, status) 
-                       VALUES (%s, %s, %s)""",
-                    (validacao.data_validacao, validacao.total_horas, validacao.status),
-                )
+            novo_id = resultado.scalar()
 
-                connect.commit()
+            session.commit()
 
-            except Exception:
-                connect.rollback()
-                raise
-                
-            finally:
-                cursor.close()
+            return novo_id
 
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
 
     def deletar(self, id_validacao: int) -> None:
 
-        connect = get_connection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
+            session.execute(text("DELETE FROM validacao_professor_monitor WHERE id_validacao = :id"), {"id": id_validacao})
 
-            try:
-                cursor.execute("DELETE FROM validacao_professor_monitor WHERE id_validacao = %s", (id_validacao,))
+            session.commit()
 
-                connect.commit()
-
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
     

@@ -47,5 +47,6 @@ def remover(id_user: int):
             
         _repo.deletar(id_user)
         return True, "Usuário removido."
+        
     except Exception as erro:
         return False, f"Erro: {erro}"

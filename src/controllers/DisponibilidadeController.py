@@ -49,9 +49,7 @@ def cadastrar(horario_inicio: str, horario_final: str, data_inicio: str,
             horario_final=horario_final,
             data_inicio=data_inicio,
             data_fim=data_fim,
-            dia_semana=dia_semana,
-            id_monitor=id_monitor,
-        ))
+            dia_semana=dia_semana))
         return True, "Disponibilidade cadastrada com sucesso."
 
     except Exception as erro:

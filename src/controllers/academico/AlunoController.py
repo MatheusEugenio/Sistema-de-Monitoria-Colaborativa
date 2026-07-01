@@ -31,11 +31,8 @@ def cadastrar(matricula: int, cpf: str, nome_curso: str, id_usuario: int):
     try:
         if _repo.buscarPorMatricula(matricula):
             return False, "Aluno com a mesma matrícula já cadastrado."
-
-        if _repo.buscarPorIdUsuario(id_usuario):
-            return False, "Usuário já cadastrado como aluno."
-
-        _repo.inserir(Aluno(matricula=matricula, cpf=cpf, nome_curso=nome_curso, id_usuario=id_usuario))
+            
+        _repo.inserir(Aluno(matricula=matricula, cpf=cpf, nome_curso=nome_curso))
         
         return True, "Aluno cadastrado com sucesso."
     except Exception as erro:
@@ -45,7 +42,7 @@ def cadastrar(matricula: int, cpf: str, nome_curso: str, id_usuario: int):
 def remover(id_aluno: int):
     try:
 
-        if not _repo.buscarPorIdUsuario(id_aluno):
+        if not _repo.buscarPorIdAluno(id_aluno):
             return False, "Aluno não encontrado."
 
         _repo.deletar(id_aluno)

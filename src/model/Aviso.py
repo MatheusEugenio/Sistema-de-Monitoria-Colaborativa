@@ -1,8 +1,9 @@
 from typing import Optional, List
 from dataclasses import dataclass
 from datetime import date
-import psycopg2.extras
-from database.connectection import get_connection
+
+from sqlalchemy import text
+from database.connection import get_session
 
 @dataclass
 class Aviso:
@@ -16,108 +17,70 @@ class AvisoRepository:
 
     def buscarAvisoPorId(self, id_aviso: int) -> Optional[Aviso]:
         
-        connect = get_connection()
-
+        session = get_session()
+        
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-            cursor.execute(
-                "SELECT id_aviso, titulo, descricao, data_publicacao FROM aviso WHERE id_aviso = %s",
-                (id_aviso,),
-            )
+            resultado = session.execute(text("SELECT id_aviso, titulo, descricao, data_publicacao FROM aviso WHERE id_aviso = :id_aviso"), {"id_aviso": id_aviso})
             
-            linha = cursor.fetchone()
-
+            linha = resultado.mappings().first()
+            
             return Aviso(**linha) if linha else None
         finally:
-            cursor.close()
-            connect.close()
+            session.close()
 
     def buscarAviso(self, titulo: str, descricao: str) -> Optional[Aviso]:
         
-        connect = get_connection()
-
+        session = get_session()
+        
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-            cursor.execute(
-                "SELECT id_aviso, titulo, descricao, data_publicacao FROM aviso WHERE titulo = %s AND descricao = %s",
-                (titulo, descricao),
-            )
+            resultado = session.execute(text("SELECT id_aviso, titulo, descricao, data_publicacao FROM aviso WHERE titulo = :titulo AND descricao = :descricao"), {"titulo": titulo, "descricao": descricao})
             
-            linha = cursor.fetchone()
-
+            linha = resultado.mappings().first()
+            
             return Aviso(**linha) if linha else None
         finally:
-            cursor.close()
-            connect.close()
+            session.close()
 
     def listar(self) -> List[Aviso]:
-
-        connect = get_connection()
-
+        
+        session = get_session()
+        
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-            cursor.execute("SELECT id_aviso, titulo, descricao, data_publicacao FROM aviso ORDER BY data_publicacao DESC")
-
-            linhas = cursor.fetchall()
-
-            cursor.close()
-
-            return [
-                Aviso(
-                    id_aviso=l["id_aviso"],
-                    titulo=l["titulo"],
-                    descricao=l["descricao"],
-                    data_publicacao=l["data_publicacao"]
-                ) for l in linhas
-            ]
-
+            resultado = session.execute(text("SELECT id_aviso, titulo, descricao, data_publicacao FROM aviso ORDER BY data_publicacao DESC"))
+           
+            linhas = resultado.mappings().all()
+           
+            return [Aviso(**linha) for linha in linhas]
         finally:
-            connect.close()
+            session.close()
 
     def inserir(self, aviso: Aviso) -> None:
-
-        connect = get_connection()
-
+       
+        session = get_session()
+        
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute(
-                    """INSERT INTO aviso (titulo, descricao, data_publicacao) 
-                       VALUES (%s, %s, %s)""",
-                    (aviso.titulo, aviso.descricao, aviso.data_publicacao),
-                )
-
-                connect.commit()
-
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-                
+            
+            session.execute(text("INSERT INTO aviso (titulo, descricao, data_publicacao) VALUES (:titulo, :descricao, :data_publicacao)"), {"titulo": aviso.titulo, "descricao": aviso.descricao, "data_publicacao": aviso.data_publicacao})
+            
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
 
     def deletar(self, id_aviso: int) -> None:
-
-        connect = get_connection()
-
+        
+        session = get_session()
+        
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute("DELETE FROM aviso WHERE id_aviso = %s", (id_aviso,))
+            
+            session.execute(text("DELETE FROM aviso WHERE id_aviso = :id_aviso"), {"id_aviso": id_aviso})
 
-                connect.commit()
+            session.commit()
 
-            except Exception:
-                connect.rollback()
-                raise
-            finally:
-                cursor.close()
-
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()

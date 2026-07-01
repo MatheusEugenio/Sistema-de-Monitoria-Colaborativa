@@ -1,10 +1,13 @@
 from typing import Optional, List
 from dataclasses import dataclass
 from datetime import date
-import psygopg2.extras
-from database.connection import get_connection
+from enum import Enum
 
-enum StatusReserva:
+from sqlalchemy import text
+from database.connection import get_session
+
+class StatusReserva(Enum):
+
     RESERVADO = "reservado"
     LIVRE = "livre"
     EM_USO = "em_uso"
@@ -15,113 +18,87 @@ class Reserva:
     id_reserva: Optional[int] = None
     data_reserva: datetime
     status: StatusReserva
-   
+
 class ReservaRepository:
 
-    def reservaExiste(self, id_reserva: int, data_reserva: datetime) -> bool:
-        connect = get_connection()
+    def reservaExiste(self,id_reserva: int,data_reserva: datetime) -> bool:
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute("SELECT * FROM reserva WHERE id_reserva = %s AND data_reserva = %s", (id_reserva, data_reserva))
+            resultado = session.execute(text("SELECT COUNT(*) FROM reserva WHERE id_reserva = :id AND data_reserva = :data"),{"id": id_reserva,"data": data_reserva})
 
-            linha = cursor.fetchone()
-
-            return linha is not None
+            return resultado.scalar() > 0
 
         finally:
-            cursor.close()
-            connect.close()
+            session.close()
 
-    def buscarPorIdReserva(self, id_reserva: int) -> Optional[Reserva]:
-        connect = get_connection()
+
+    def buscarPorIdReserva(self,id_reserva: int) -> Optional[Reserva]:
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute("SELECT * FROM reserva WHERE id_reserva = %s", (id_reserva,))
+            resultado = session.execute(text("SELECT id_reserva, data_reserva, status FROM reserva WHERE id_reserva = :id"),{"id": id_reserva})
 
-            linha = cursor.fetchone()
+            linha = resultado.mappings().first()
 
             return Reserva(**linha) if linha else None
 
         finally:
-            cursor.close()
-            connect.close()
-            
+            session.close()
+
+
     def listar(self) -> List[Reserva]:
-        
-        connect = get_connection()
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute("SELECT id_reserva, data_reserva, status FROM reserva")
+            resultado = session.execute(text("SELECT id_reserva, data_reserva, status FROM reserva ORDER BY id_reserva"))
 
-            linhas = cursor.fetchall()
+            linhas = resultado.mappings().all()
 
-            cursor.close()
-
-
-            return [
-                Reserva(
-                    id_reserva=l["id_reserva"],
-                    data_reserva=l["data_reserva"],
-                    status=l["status"]
-                ) for l in linhas
-            ]
+            return [Reserva(**linha) for linha in linhas]
 
         finally:
-            connect.close()
+            session.close()
+
 
     def inserir(self, reserva: Reserva) -> None:
-        
-        connect = get_connection()
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
-            
-            if self.reservaExiste(reserva.id_reserva, reserva.data_reserva):
-                raise ValueError(f"Reserva com ID {reserva.id_reserva} e data {reserva.data_reserva} já existe.")
-            try:
-                cursor.execute(
-                    """INSERT INTO reserva (data_reserva, status) 
-                       VALUES (%s, %s)""",
-                    (reserva.data_reserva, reserva.status),
-                )
 
-                connect.commit()
+            if (reserva.id_reserva is not None and self.reservaExiste(reserva.id_reserva, reserva.data_reserva)):
+                raise ValueError("Reserva já cadastrada.")
 
-            except Exception:
-                connect.rollback()
-                raise
+            session.execute(text("INSERT INTO reserva (data_reserva, status) VALUES (:data_reserva, :status)"),{"data_reserva": reserva.data_reserva, "status": reserva.status.value})
 
-            finally:
-                cursor.close()
+            session.commit()
 
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
 
-    def deletar(self, id_reserva: int) -> None:
 
-        connect = get_connection()
+    def deletar(self,id_reserva: int) -> None:
+
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
 
-            try:
-                cursor.execute("DELETE FROM reserva WHERE id_reserva = %s", (id_reserva,))
+            session.execute(text("DELETE FROM reserva WHERE id_reserva = :id"),{"id": id_reserva})
 
-                connect.commit()
+            session.commit()
 
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
-
+            session.close()

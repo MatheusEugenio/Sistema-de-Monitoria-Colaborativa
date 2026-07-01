@@ -33,6 +33,7 @@ def registrar(presente: str, hora_entrada: str, hora_saida: str, id_aluno: int, 
         return False, "Horários de entrada e saída são obrigatórios."
 
     try:
+
         _repo.inserir(Frequencia(
             presente=presente,
             hora_entrada=hora_entrada,
@@ -49,6 +50,9 @@ def registrar(presente: str, hora_entrada: str, hora_saida: str, id_aluno: int, 
 def remover(id_frequencia: int):
 
     try:
+
+        if _repo.buscarPorId(id_frequencia) is None:
+            return False, "Frequência não encontrada."
 
         _repo.deletar(id_frequencia)
         return True, "Frequência removida."

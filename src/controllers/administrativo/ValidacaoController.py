@@ -1,10 +1,10 @@
 import pandas as pd
 
 from models import Validacao, ValidacaoRepository
-import controllers.administrativo.ProfessorController as professor_controller
-import controllers.monitoria.MonitorController as monitor_controller
+import controllers.administrativo.ProfessorController as ProfessorController
+import controllers.monitoria.MonitorController as MonitorController
 
-_repo = ValidacaoRepository()
+_repo = ValidacaoProfessorMonitorRepository()
 
 STATUS_OPCOES = ["Pendente", "Aprovado", "Rejeitado"]
 
@@ -48,11 +48,7 @@ def registrar(data_validacao: str, total_horas: int, status_validacao: str,
         _repo.inserir(Validacao(
             data_validacao=data_validacao,
             total_horas=total_horas,
-            status_validacao=status_validacao,
-            id_professor=id_professor,
-            id_monitor=id_monitor,
-        ))
-
+            status_validacao=status_validacao,))
         return True, "Validação registrada com sucesso."
 
     except Exception as erro:

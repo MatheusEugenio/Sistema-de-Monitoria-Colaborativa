@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from datetime import time
 from enum import Enum
 
-import psycopg2.extras
-from database.connection import get_connection
+from sqlalchemy import text
+from database.connection import get_session
 
 
 class Presenca(Enum):
@@ -21,75 +21,70 @@ class Frequencia:
 
 class FrequenciaRepository:
 
-    def listarFrequencias(self) -> List[Frequencia]:
+    def buscarPorId(self, id_frequencia: int) -> Optional[Frequencia]:
 
-        connect = get_connection()
+        session = get_session()
+        
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            resultado = session.execute(text("SELECT id_frequencia, hora_saida, hora_entrada, presente FROM frequencia WHERE id_frequencia = :id_frequencia"), {"id_frequencia": id_frequencia})
             
-            cursor.execute("SELECT * FROM frequencia ORDER BY id_frequencia")
+            linha = resultado.mappings().first()
             
-            linhas = cursor.fetchall()
-            
-            cursor.close()
+            return Frequencia(**linha) if linha else None
 
-            frequencias = []
-
-            for linha in linhas:
-                frequencias.append(Frequencia(**linha))
-
-            return frequencias
         finally:
-            connect.close()
+            session.close()
 
+    def listar(self) -> List[Frequencia]:
+
+        session = get_session()
+        
+        try:
+            resultado = session.execute(text("SELECT id_frequencia, hora_saida, hora_entrada, presente FROM frequencia ORDER BY id_frequencia"))
+            
+            linhas = resultado.mappings().all()
+            
+            return [Frequencia(**linha) for linha in linhas]
+
+        finally:
+            session.close()
 
     def inserir(self, frequencia: Frequencia) -> int:
+       
+        session = get_session()
+        
+        try:
 
-        connect = get_connection()
+            if self.buscarPorId(frequencia.id_frequencia) is not None:
+                raise ValueError("Frequência já existe.")
+                
+            resultado = session.execute(
+                text("INSERT INTO frequencia (hora_saida, hora_entrada, presente) VALUES (:hora_saida, :hora_entrada, :presente) RETURNING id_frequencia"),
+                {"hora_saida": frequencia.hora_saida, "hora_entrada": frequencia.hora_entrada, "presente": frequencia.presente.value}
+            )
+            
+            novo_id = resultado.scalar()
+            session.commit()
+          
+            return novo_id
 
-        try:    
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-            try:
-                cursor.execute(
-                    "INSERT INTO frequencia (hora_saida, hora_entrada, presente) VALUES (%s, %s, %s) RETURNING id_frequencia",
-                    (frequencia.hora_saida, frequencia.hora_entrada, frequencia.presente.value),
-                )
-
-                novo_id = cursor.fetchone()["id_frequencia"]
-                connect.commit()
-
-                return novo_id
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
 
     def deletar(self, id_frequencia: int) -> None:
 
-        connect = get_connection()
-
+        session = get_session()
+       
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            session.execute(text("DELETE FROM frequencia WHERE id_frequencia = :id_frequencia"), {"id_frequencia": id_frequencia})
+            
+            session.commit()
 
-            try:
-                cursor.execute("DELETE FROM frequencia WHERE id_frequencia = %s", (id_frequencia,))
-
-                connect.commit()
-
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
-
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
-
-
+            session.close()

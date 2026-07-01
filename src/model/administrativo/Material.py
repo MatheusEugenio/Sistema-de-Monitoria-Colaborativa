@@ -1,7 +1,8 @@
 from typing import List, Optional
 from dataclasses import dataclass
-import psycopg2.extras
-from database.connectection import get_connectection
+
+from sqlalchemy import text
+from database.connectection import get_session
 
 @dataclass
 class Material:
@@ -14,100 +15,138 @@ class Material:
 class MaterialRepository:
 
     def buscarPorId(self, id_material: int) -> Optional[Material]:
-            
-        connect = get_connectection()
-        
-        try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute(
-                "SELECT * FROM material WHERE id_material = %s",
-                (id_material,)
+        session = get_session()
+
+        try:
+
+            resultado = session.execute(
+
+                text("""
+                    SELECT
+                        id_material,
+                        tipo_arquivo,
+                        link_arquivo,
+                        descricao,
+                        titulo
+                    FROM material
+                    WHERE id_material = :id
+                """),
+
+                {"id": id_material}
+
             )
 
-            linha = cursor.fetchone()
-            cursor.close()
+            linha = resultado.mappings().first()
 
             return Material(**linha) if linha else None
-        finally:
-            connect.close()
 
-    def buscarArquivo(self, titulo, tipo_arquivo, link_arquivo, descricao) -> Optional[Material]:
-        connect = get_connectection()
-        
+        finally:
+
+            session.close()
+
+
+    def buscarArquivo(
+        self,
+        titulo: str,
+        tipo_arquivo: str,
+        link_arquivo: Optional[str],
+        descricao: str
+    ) -> Optional[Material]:
+
+        session = get_session()
+
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute(
-                "SELECT * FROM material WHERE titulo = %s AND tipo_arquivo = %s AND link_arquivo = %s AND descricao = %s",
-                (titulo, tipo_arquivo, link_arquivo, descricao)
-            )
+            resultado = session.execute(
+                text("""
+                    SELECT
+                        id_material,
+                        tipo_arquivo,
+                        link_arquivo,
+                        descricao,
+                        titulo
+                    FROM material
+                    WHERE titulo = :titulo
+                      AND tipo_arquivo = :tipo_arquivo
+                      AND link_arquivo = :link_arquivo
+                      AND descricao = :descricao
+                """), {"titulo": titulo,
+                    "tipo_arquivo": tipo_arquivo,"link_arquivo": link_arquivo,"descricao": descricao})
 
-            linha = cursor.fetchone()
-            cursor.close()
+            linha = resultado.mappings().first()
 
             return Material(**linha) if linha else None
+
         finally:
-            connect.close()
+            session.close()
 
 
     def listar(self) -> List[Material]:
-        
-        connect = get_connectection()
-        
+
+        session = get_session()
+
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute("SELECT * FROM material ORDER BY id_material")
+            resultado = session.execute(
+                text("""
+                    SELECT
+                        id_material,
+                        tipo_arquivo,
+                        link_arquivo,
+                        descricao,
+                        titulo
+                    FROM material
+                    ORDER BY id_material
+                """))
 
-            linhas = cursor.fetchall()
-            cursor.close()
-            
-            materiais = []
+            linhas = resultado.mappings().all()
 
-            for linha in linhas:
-                materiais.append(Material(**linha))
-                
-            return materiais
+            return [Material(**linha) for linha in linhas]
+
         finally:
-            connect.close()
+            session.close()
+
 
     def inserir(self, material: Material) -> None:
 
-        connect = get_connectection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute(
-                    """INSERT INTO material (tipo_arquivo, link_arquivo, descricao, titulo) 
-                       VALUES (%s, %s, %s, %s)""",
-                    (material.tipo_arquivo, material.link_arquivo, material.descricao, material.titulo),
-                )
 
-                connect.commit()
-            except Exception:
-                connect.rollback()
-                raise
-            finally:
-                cursor.close()
+            session.execute(
+                text("""
+                    INSERT INTO material
+                        (tipo_arquivo, link_arquivo, descricao, titulo)
+                    VALUES
+                        (:tipo_arquivo, :link_arquivo, :descricao, :titulo)
+                """), {"tipo_arquivo": material.tipo_arquivo,"link_arquivo": material.link_arquivo,"descricao": material.descricao,"titulo": material.titulo})
+
+            session.commit()
+
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
+
 
     def deletar(self, id_material: int) -> None:
 
-        connect = get_connectection()
+        session = get_session()
 
         try:
-            cursor = connect.cursor()
-            try:
-                cursor.execute("DELETE FROM material WHERE id_material = %s", (id_material,))
+            session.execute(
+                text("""
+                    DELETE
+                    FROM material
+                    WHERE id_material = :id
+                """),{"id": id_material})
 
-                connect.commit()
-            except Exception:
-                connect.rollback()
-                raise
-            finally:
-                cursor.close()
+            session.commit()
+
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()

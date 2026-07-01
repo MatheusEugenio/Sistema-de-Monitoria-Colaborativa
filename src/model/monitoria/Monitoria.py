@@ -1,7 +1,8 @@
 from typing import List, Optional
 from dataclasses import dataclass
-import psycopg2.extras
-from database.connectection import get_connection
+
+from sqlalchemy import text
+from database.connection import get_session
 
 @dataclass
 class Monitoria:
@@ -13,97 +14,70 @@ class Monitoria:
 
 class MonitoriaRepository:
 
-    def buscarPorIdMonitoria(self, id_monitoria: int) -> Optional[Monitoria]:
-        connect = get_connection()
-
+   def buscarPorIdMonitoria(self, id_monitoria: int) -> Optional[Monitoria]:
+        
+        session = get_session()
+        
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("SELECT * FROM monitorias WHERE id = %s", (id_monitoria,))
 
-            linha = cursor.fetchone()
+            resultado = session.execute(text("SELECT id AS id_monitoria, monitor_id, disciplina_id FROM monitorias WHERE id = :id"), {"id": id_monitoria})
             
+            linha = resultado.mappings().first()
+
             return Monitoria(**linha) if linha else None
+
         finally:
-            cursor.close()
-            connect.close()
-   
+            session.close()
+
     def listar(self) -> List[Monitoria]:
-
-        connect = get_connection()
-
+        
+        session = get_session()
+        
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            cursor.execute("""
-                SELECT m.id, m.monitor_id, m.disciplina_id
-                FROM monitorias m
-                JOIN usuarios u ON u.id = m.monitor_id
-                JOIN disciplinas d ON d.id = m.disciplina_id
-                ORDER BY d.nome
-            """)
+            resultado = session.execute(text("SELECT m.id AS id_monitoria, m.monitor_id, m.disciplina_id FROM monitorias m JOIN usuarios u ON u.id = m.monitor_id JOIN disciplinas d ON d.id = m.disciplina_id ORDER BY d.nome"))
+            
+            linhas = resultado.mappings().all()
 
-            linhas = cursor.fetchall()
-            cursor.close()
-
-            return [
-                Monitoria(
-                    id_monitoria=l["id"],
-                    monitor_id=l["monitor_id"],
-                    disciplina_id=l["disciplina_id"],
-                ) for l in linhas
-            ]
+            return [Monitoria(**linha) for linha in linhas]
 
         finally:
-            connect.close()
+            session.close()
 
-    def criar(self, monitoria: Monitoria) -> int:
-
-        connect = get_connection()
-
+    def inserir(self, monitoria: Monitoria) -> int:
+        session = get_session()
         try:
-            cursor = connect.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-                
-            if self.buscarPorIdMonitoria(monitoria.id_monitoria): 
+            
+            existe = session.execute(text("SELECT 1 FROM monitorias WHERE id = :id"), {"id": monitoria.id_monitoria}).first()
+            
+            if existe:
                 raise ValueError(f"Monitoria com ID {monitoria.id_monitoria} já existe.")
-                
-            try:
-                cursor.execute(
-                    """INSERT INTO monitorias (monitor_id, disciplina_id)
-                       VALUES (%s, %s) RETURNING id""",
-                    (monitoria.monitor_id, monitoria.disciplina_id),
-                )
+            
+            resultado = session.execute(text("INSERT INTO monitorias (monitor_id, disciplina_id) VALUES (:monitor_id, :disciplina_id) RETURNING id"), {"monitor_id": monitoria.monitor_id, "disciplina_id": monitoria.disciplina_id})
+            
+            novo_id = resultado.scalar()
 
-                novo_id = cursor.fetchone()["id"]
+            session.commit()
+            
+            return novo_id
 
-                connect.commit()
-
-                return novo_id
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
 
-    def deletar(self, id_monitor: int) -> None:
-
-        connect = get_connection()
-
+    def deletar(self, id_monitoria: int) -> None:
+        
+        session = get_session()
+        
         try:
-            cursor = connect.cursor()
+            
+            session.execute(text("DELETE FROM monitorias WHERE id = :id"), {"id": id_monitoria})
 
-            try:
-                cursor.execute("DELETE FROM monitorias WHERE id = %s", (id_monitor,))
+            session.commit()
 
-                connect.commit()
-
-            except Exception:
-                connect.rollback()
-                raise
-
-            finally:
-                cursor.close()
+        except Exception:
+            session.rollback()
+            raise
         finally:
-            connect.close()
+            session.close()
