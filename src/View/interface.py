@@ -63,3 +63,79 @@ class SistemaMonitoria(ctk.CTk):
         self.telas["Sessão"] = TelaSessao(self.frame_conteudo)
 
         self.abrir_tela("Início")
+
+def abrir_tela(self, id_tela):
+        for tela in self.telas.values():
+            tela.grid_forget()
+        for btn in self.botoes.values():
+            btn.configure(fg_color="transparent")
+
+        self.telas[id_tela].grid(row=0, column=0, sticky="nsew")
+        self.botoes[id_tela].configure(fg_color="#2b2b2b")
+
+        if id_tela == "Início":
+            self.atualizar_dashboard()
+
+def criar_tela_inicio(self):
+        frame = ctk.CTkFrame(self.frame_conteudo, fg_color="transparent")
+        ctk.CTkLabel(frame, text="Dashboard Geral", font=ctk.CTkFont(size=28, weight="bold")).pack(anchor="w", pady=(0, 20))
+
+        grid_cards = ctk.CTkFrame(frame, fg_color="transparent")
+        grid_cards.pack(fill="x", pady=10)
+
+        def criar_card(parent, titulo, cor):
+            card = ctk.CTkFrame(parent, fg_color=cor, corner_radius=10, height=100, width=200)
+            card.pack(side="left", padx=10, expand=True, fill="both")
+            card.pack_propagate(False)
+            ctk.CTkLabel(card, text=titulo, font=ctk.CTkFont(size=14, weight="bold"), text_color="white").pack(pady=(15, 5))
+
+            lbl_valor = ctk.CTkLabel(card, text="...", font=ctk.CTkFont(size=32, weight="bold"), text_color="white")
+            lbl_valor.pack()
+            return lbl_valor
+
+        self.lbl_val_alunos = criar_card(grid_cards, "Alunos Ativos", "#1f538d")
+        self.lbl_val_monitores = criar_card(grid_cards, "Monitores", "#2b8a3e")
+        self.lbl_val_sessoes = criar_card(grid_cards, "Sessões Hoje", "#c92a2a")
+        self.lbl_val_disciplinas = criar_card(grid_cards, "Disciplinas", "#e67700")
+
+        ctk.CTkLabel(frame, text="Bem-vindo ao Sistema de Monitoria Colaborativa!\nSelecione um módulo no menu lateral para iniciar o gerenciamento.",
+                    font=ctk.CTkFont(size=16), text_color="gray").pack(pady=40)
+
+        ctk.CTkButton(frame, text="🔄 Atualizar Dashboard", command=self.atualizar_dashboard, fg_color="#242424", hover_color="#2b2b2b").pack()
+
+        return frame
+
+def atualizar_dashboard(self):
+        if not hasattr(self, 'lbl_val_alunos'):
+            return
+
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT COUNT(*) FROM aluno;")
+            self.lbl_val_alunos.configure(text=str(cursor.fetchone()[0]))
+
+            cursor.execute("SELECT COUNT(*) FROM monitor;")
+            self.lbl_val_monitores.configure(text=str(cursor.fetchone()[0]))
+
+            cursor.execute("SELECT COUNT(*) FROM sessao WHERE data = CURRENT_DATE;")
+            self.lbl_val_sessoes.configure(text=str(cursor.fetchone()[0]))
+
+            cursor.execute("SELECT COUNT(*) FROM disciplina;")
+            self.lbl_val_disciplinas.configure(text=str(cursor.fetchone()[0]))
+
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            print(f"Erro ao recarregar dados do dashboard: {e}")
+            for lbl in [self.lbl_val_alunos, self.lbl_val_monitores, self.lbl_val_sessoes, self.lbl_val_disciplinas]:
+                if lbl.winfo_exists():
+                    lbl.configure(text="Erro")
+
+def estilizar_tabelas(self):
+        style = ttk.Style()
+        style.theme_use("default")
+        style.configure("Treeview", background="#2b2b2b", foreground="white", rowheight=30, fieldbackground="#2b2b2b", borderwidth=0)
+        style.map('Treeview', background=[('selected', '#1f538d')])
+        style.configure("Treeview.Heading", background="#1a1a1a", foreground="white", relief="flat", font=('Arial', 10, 'bold'))
