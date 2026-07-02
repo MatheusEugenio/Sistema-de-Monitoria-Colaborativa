@@ -129,3 +129,169 @@ class BaseCRUDFrame(ctk.CTkFrame):
             conn.close()
         except Exception as e:
             print(f"Erro ao carregar dados de {self.tabela}: {e}")
+
+def on_linha_selecionada(self, event):
+        item_selecionado = self.tree.selection()
+        if not item_selecionado:
+            return
+            
+        valores_tree = self.tree.item(item_selecionado, "values")
+        id_registro = valores_tree[0]  
+        coluna_id = "id_user" if self.tabela == "usuario" else f"id_{self.tabela}"
+        
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            
+            # Garantimos que a linha específica também puxa os IDs explícitos e aliases
+            if self.tabela == "aluno":
+                query = f"SELECT a.*, u.nome, a.id_usuario FROM aluno a INNER JOIN usuario u ON a.id_usuario = u.id_user WHERE a.{coluna_id} = %s;"
+            elif self.tabela == "professor":
+                query = f"SELECT p.*, u.nome, p.id_professor AS id_usuario FROM professor p INNER JOIN usuario u ON p.id_professor = u.id_user WHERE p.{coluna_id} = %s;"
+            elif self.tabela == "monitor":
+                query = f"SELECT m.*, u.nome, m.id_aluno FROM monitor m INNER JOIN aluno a ON m.id_aluno = a.id_aluno INNER JOIN usuario u ON a.id_usuario = u.id_user WHERE m.{coluna_id} = %s;"
+            else:
+                query = f"SELECT * FROM {self.tabela} WHERE {coluna_id} = %s;"
+                
+            cursor.execute(query, (id_registro,))
+            linha = cursor.fetchone()
+            
+            if linha:
+                colunas_db = [desc[0] for desc in cursor.description]
+                row_dict = dict(zip(colunas_db, linha))
+                
+                for campo, entry in self.inputs.items():
+                    col_db = self._normalizar_nome_coluna(campo)
+                    entry.delete(0, "end")
+                    if col_db in row_dict and row_dict[col_db] is not None:
+                        entry.insert(0, str(row_dict[col_db]))
+                        
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            print(f"Erro ao selecionar linha: {e}")
+
+def salvar(self):
+        valores = []
+        colunas_db = []
+        coluna_id = "id_user" if self.tabela == "usuario" else f"id_{self.tabela}"
+        
+        for campo, entry in self.inputs.items():
+            col_db = self._normalizar_nome_coluna(campo)
+            
+            if col_db == "nome" and self.tabela in ["aluno", "professor", "monitor"]:
+                continue
+                
+            if col_db == coluna_id:
+                continue  
+                
+            valor = entry.get().strip()
+            if not valor:
+                messagebox.showwarning("Aviso", f"O campo '{campo}' não pode estar vazio.")
+                return
+            
+            valores.append(valor)
+            colunas_db.append(col_db)
+            
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            
+            colunas_str = ", ".join(colunas_db)
+            placeholders = ", ".join(["%s"] * len(valores))
+            query = f"INSERT INTO {self.tabela} ({colunas_str}) VALUES ({placeholders});"
+            
+            cursor.execute(query, tuple(valores))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            messagebox.showinfo("Sucesso", f"{self.nome} cadastrado com sucesso!")
+            self.carregar_dados()
+            
+            for entry in self.inputs.values():
+                entry.delete(0, "end")
+        except Exception as e:
+            messagebox.showerror("Erro ao Salvar", f"Erro:\n{e}")
+
+def atualizar_registro(self):
+        item_selecionado = self.tree.selection()
+        if not item_selecionado:
+            messagebox.showwarning("Aviso", "Por favor, selecione um registo na tabela para atualizar.")
+            return
+            
+        valores_tree = self.tree.item(item_selecionado, "values")
+        id_registro = valores_tree[0]
+        coluna_id = "id_user" if self.tabela == "usuario" else f"id_{self.tabela}"
+            
+        set_statements = []
+        valores = []
+        
+        for campo, entry in self.inputs.items():
+            col_db = self._normalizar_nome_coluna(campo)
+            
+            if col_db == coluna_id or col_db == "id_user" or col_db.startswith("id_"):
+                continue 
+                
+            if col_db == "nome" and self.tabela in ["aluno", "professor", "monitor"]:
+                continue
+                
+            valor = entry.get().strip()
+            if not valor:
+                messagebox.showwarning("Aviso", f"O campo '{campo}' não pode estar vazio.")
+                return
+                
+            set_statements.append(f"{col_db} = %s")
+            valores.append(valor)
+            
+        if not set_statements:
+            messagebox.showinfo("Informação", "Nenhum campo editável foi alterado (IDs não podem ser modificados).")
+            return
+            
+        valores.append(id_registro)  
+        
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            
+            set_str = ", ".join(set_statements)
+            query = f"UPDATE {self.tabela} SET {set_str} WHERE {coluna_id} = %s;"
+            
+            cursor.execute(query, tuple(valores))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            messagebox.showinfo("Sucesso", f"{self.nome} atualizado com sucesso!")
+            self.carregar_dados()
+            
+            for entry in self.inputs.values():
+                entry.delete(0, "end")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao atualizar:\n{e}")
+
+def excluir(self):
+        item_selecionado = self.tree.selection()
+        if not item_selecionado:
+            messagebox.showwarning("Aviso", "Selecione um registo para excluir.")
+            return
+
+        valores = self.tree.item(item_selecionado, "values")
+        id_registro = valores[0]
+        coluna_id = "id_user" if self.tabela == "usuario" else f"id_{self.tabela}"
+
+        if messagebox.askyesno("Confirmar", f"Deseja excluir o registo {id_registro}?"):
+            try:
+                conn = get_connection()
+                cursor = conn.cursor()
+                cursor.execute(f"DELETE FROM {self.tabela} WHERE {coluna_id} = %s;", (id_registro,))
+                conn.commit()
+                cursor.close()
+                conn.close()
+                
+                messagebox.showinfo("Sucesso", "Excluído com sucesso!")
+                self.carregar_dados()
+                for entry in self.inputs.values():
+                    entry.delete(0, "end")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Falha ao excluir (Verifique Vínculos):\n{e}")
