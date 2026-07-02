@@ -64,7 +64,8 @@ class SistemaMonitoria(ctk.CTk):
 
         self.abrir_tela("Início")
 
-def abrir_tela(self, id_tela):
+    def abrir_tela(self, id_tela):
+        """Esconde a tela anterior, destaca o botão selecionado e atualiza se for o Dashboard."""
         for tela in self.telas.values():
             tela.grid_forget()
         for btn in self.botoes.values():
@@ -73,10 +74,11 @@ def abrir_tela(self, id_tela):
         self.telas[id_tela].grid(row=0, column=0, sticky="nsew")
         self.botoes[id_tela].configure(fg_color="#2b2b2b")
 
+       
         if id_tela == "Início":
             self.atualizar_dashboard()
 
-def criar_tela_inicio(self):
+    def criar_tela_inicio(self):
         frame = ctk.CTkFrame(self.frame_conteudo, fg_color="transparent")
         ctk.CTkLabel(frame, text="Dashboard Geral", font=ctk.CTkFont(size=28, weight="bold")).pack(anchor="w", pady=(0, 20))
 
@@ -105,7 +107,7 @@ def criar_tela_inicio(self):
 
         return frame
 
-def atualizar_dashboard(self):
+    def atualizar_dashboard(self):
         if not hasattr(self, 'lbl_val_alunos'):
             return
 
@@ -133,7 +135,7 @@ def atualizar_dashboard(self):
                 if lbl.winfo_exists():
                     lbl.configure(text="Erro")
 
-def estilizar_tabelas(self):
+    def estilizar_tabelas(self):
         style = ttk.Style()
         style.theme_use("default")
         style.configure("Treeview", background="#2b2b2b", foreground="white", rowheight=30, fieldbackground="#2b2b2b", borderwidth=0)

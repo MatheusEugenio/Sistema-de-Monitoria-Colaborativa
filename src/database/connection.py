@@ -12,10 +12,13 @@ DATABASE_URL =  (
     f"{DB_CONFIG['dbname']}"
 )
 
-engine = create_engine(DATADASE_URL)
+engine = create_engine(DATABASE_URL)
 
 Session = sessionmaker(bind=engine)
 
 def get_session():
     return Session()
+
+def get_connection():
+    return engine.raw_connection()
     

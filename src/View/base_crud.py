@@ -93,6 +93,7 @@ class BaseCRUDFrame(ctk.CTkFrame):
             "curso": "nome_curso" 
         }
         return mapa_colunas.get(s, s)
+
     def carregar_dados(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -130,7 +131,7 @@ class BaseCRUDFrame(ctk.CTkFrame):
         except Exception as e:
             print(f"Erro ao carregar dados de {self.tabela}: {e}")
 
-def on_linha_selecionada(self, event):
+    def on_linha_selecionada(self, event):
         item_selecionado = self.tree.selection()
         if not item_selecionado:
             return
@@ -171,7 +172,7 @@ def on_linha_selecionada(self, event):
         except Exception as e:
             print(f"Erro ao selecionar linha: {e}")
 
-def salvar(self):
+    def salvar(self):
         valores = []
         colunas_db = []
         coluna_id = "id_user" if self.tabela == "usuario" else f"id_{self.tabela}"
@@ -214,7 +215,7 @@ def salvar(self):
         except Exception as e:
             messagebox.showerror("Erro ao Salvar", f"Erro:\n{e}")
 
-def atualizar_registro(self):
+    def atualizar_registro(self):
         item_selecionado = self.tree.selection()
         if not item_selecionado:
             messagebox.showwarning("Aviso", "Por favor, selecione um registo na tabela para atualizar.")
@@ -270,7 +271,7 @@ def atualizar_registro(self):
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao atualizar:\n{e}")
 
-def excluir(self):
+    def excluir(self):
         item_selecionado = self.tree.selection()
         if not item_selecionado:
             messagebox.showwarning("Aviso", "Selecione um registo para excluir.")
