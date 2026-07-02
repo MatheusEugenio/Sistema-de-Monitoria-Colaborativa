@@ -102,8 +102,6 @@ class BaseCRUDFrame(ctk.CTkFrame):
         try:
             conn = get_connection()
             cursor = conn.cursor()
-            
-            # Consultas adaptadas com 'AS' para forçar os nomes das chaves a baterem com a interface
             if self.tabela == "aluno":
                 query = f"SELECT a.*, u.nome, a.id_usuario FROM aluno a INNER JOIN usuario u ON a.id_usuario = u.id_user ORDER BY a.{coluna_id} ASC;"
             elif self.tabela == "professor":
