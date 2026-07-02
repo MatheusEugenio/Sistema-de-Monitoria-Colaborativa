@@ -7,3 +7,11 @@ class TelaUsuario(BaseCRUDFrame):
 class TelaAluno(BaseCRUDFrame):
     def __init__(self, parent):
         super().__init__(parent, "Aluno", ["Matrícula", "CPF", "Curso", "ID Usuário"], ["ID", "Matrícula", "CPF", "Curso", "Nome"])
+        
+class TelaProfessor(BaseCRUDFrame):
+    def __init__(self, parent):
+        super().__init__(parent, "Professor", ["Departamento", "ID Usuário"], ["ID", "Departamento", "Nome"])
+
+class TelaDisciplina(BaseCRUDFrame):
+    def __init__(self, parent):
+        super().__init__(parent, "Disciplina", ["Nome", "Carga Horária", "Semestre"], ["ID", "Nome", "CH", "Semestre"])
