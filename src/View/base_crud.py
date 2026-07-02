@@ -93,3 +93,41 @@ class BaseCRUDFrame(ctk.CTkFrame):
             "curso": "nome_curso" 
         }
         return mapa_colunas.get(s, s)
+    def carregar_dados(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+            
+        coluna_id = "id_user" if self.tabela == "usuario" else f"id_{self.tabela}"
+            
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            
+            # Consultas adaptadas com 'AS' para forçar os nomes das chaves a baterem com a interface
+            if self.tabela == "aluno":
+                query = f"SELECT a.*, u.nome, a.id_usuario FROM aluno a INNER JOIN usuario u ON a.id_usuario = u.id_user ORDER BY a.{coluna_id} ASC;"
+            elif self.tabela == "professor":
+                query = f"SELECT p.*, u.nome, p.id_professor AS id_usuario FROM professor p INNER JOIN usuario u ON p.id_professor = u.id_user ORDER BY p.{coluna_id} ASC;"
+            elif self.tabela == "monitor":
+                query = f"SELECT m.*, u.nome, m.id_aluno FROM monitor m INNER JOIN aluno a ON m.id_aluno = a.id_aluno INNER JOIN usuario u ON a.id_usuario = u.id_user ORDER BY m.{coluna_id} ASC;"
+            else:
+                query = f"SELECT * FROM {self.tabela} ORDER BY {coluna_id} ASC;"
+                
+            cursor.execute(query)
+            colunas_db = [desc[0] for desc in cursor.description]
+            linhas = cursor.fetchall()
+            
+            for linha in linhas:
+                row_dict = dict(zip(colunas_db, linha))
+                tree_values = []
+                
+                for col_visual in self.colunas:
+                    col_db = self._normalizar_nome_coluna(col_visual)
+                    tree_values.append(row_dict.get(col_db, ""))
+                    
+                self.tree.insert("", "end", values=tree_values)
+                
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            print(f"Erro ao carregar dados de {self.tabela}: {e}")
